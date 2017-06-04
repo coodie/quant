@@ -17,16 +17,10 @@ RGBImage::RGBImage(const std::string &path)
   fs.get();
   xSize = x;
   ySize = y;
-  img.reserve(x*y);
-
+  img.resize(x*y*3);
   assert(max_col == MAX_COL-1);
-  for(int i = 0; i < x*y; i++)
-  {
-    char r[3];
-    fs.read(r, 3);
-    int data = (r[0]*MAX_COL*MAX_COL) + (r[1]*MAX_COL) + r[2];
-    img.push_back(data);
-  }
+
+  fs.read(img.data(), img.size());
   fs.close();
 }
 
@@ -35,19 +29,12 @@ void RGBImage::saveToFile(const std::string &path)
   std::fstream fs;
   fs.open(path, std::fstream::out | std::fstream::trunc);
   fs << "P6\n" << xSize << " " << ySize << "\n" << MAX_COL-1 << "\n";
-  for(auto val : img)
-  {
-    char r[3];
-    r[0] = val/(MAX_COL*MAX_COL);
-    r[1] = (val/MAX_COL) % MAX_COL;
-    r[2] = val % MAX_COL;
-    fs.write(r,3);
-  }
+  fs.write(img.data(),img.size());
   fs.flush();
   fs.close();
 }
 
 int RGBImage::sizeInBytes()
 {
-  return img.size()*3;
+  return img.size();
 }

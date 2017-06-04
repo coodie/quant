@@ -8,14 +8,11 @@ typedef std::vector<vecType> vec;
 
 namespace
 {
-}
-
-namespace
-{
   std::vector<vec> getVectorizedBlocks(const RGBImage& image, int w, int h)
   {
-    const std::vector<int> &img = image.img;
-    const int &xSize = image.xSize;
+    const std::vector<char> &img = image.img;
+
+    const int &xSize = image.xSize*3;
     const int &ySize = image.ySize;
 
     std::vector<vec> res;
@@ -46,15 +43,15 @@ CompressedImage compress(const RGBImage& image)
   std::vector<vec> blocks = getVectorizedBlocks(image, par->width, par->height);
   std::vector<vec*> assignedCodeVector(blocks.size());
 
-  std::vector<vec> c(1);
+  size_t vecSize = par->width*par->height;
+  std::vector<vec> c(1, vec(vecSize));
   c.reserve(1 << par->n);
-  c[0].resize(blocks[0].size());
 
   // First vector is average
   for(auto &v : blocks)
     c[0] += v/(vecType)blocks.size();
 
-
+  vec Dave(vecSize);
 
   return CompressedImage();
 }

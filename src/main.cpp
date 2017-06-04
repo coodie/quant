@@ -2,6 +2,7 @@
 #include "ProgramParameters.hpp"
 #include "Debug.hpp"
 #include "Compressor.hpp"
+#include "nanoflann.hpp"
 
 #include <iostream>
 #include "boost/program_options.hpp"
@@ -53,5 +54,7 @@ int main(int argc, char **argv)
   vm.notify();
 
   RGBImage img(par->file);
+  img.saveToFile(par->saveto);
+
   CompressedImage cImg = compress(img);
 }

@@ -13,7 +13,9 @@ class RGBImage
   RGBImage(const std::string &path);
   void saveToFile(const std::string &path);
   int sizeInBytes();
-  std::vector<int> img;
+  std::vector<char> img;
+  //sizes are given in pixels
+  //size of img is = xSize*3*ySize*3
   int xSize, ySize;
 };
 
