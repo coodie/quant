@@ -30,7 +30,7 @@ namespace
         for(size_t x = i*w; x < i*w+w; x++)
           for(size_t y = j*h; y < j*h+h; y++)
           {
-            size_t imgIndex = x*xSize + y;
+            size_t imgIndex = x*ySize + y;
             size_t vecIndex = (x-i*w)*w+(y-j*h);
             if(imgIndex < img.size())
               tmp.at(vecIndex) = (float)img.at(imgIndex);
@@ -59,7 +59,7 @@ namespace
           for(size_t x = i*w; x < i*w+w; x++)
             for(size_t y = j*h; y < j*h+h; y++)
               {
-                size_t imgIndex = x*xSize + y;
+                size_t imgIndex = x*ySize + y;
                 size_t vecIndex = (x-i*w)*w+(y-j*h);
                 if(imgIndex < imgData.size())
                   imgData.at(imgIndex) = (char)tmp.at(vecIndex);
