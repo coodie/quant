@@ -87,7 +87,7 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
   // Initialize values
   for(auto &v : trainingSet) codeVectors[0] += v/(vecType)M;
   for(auto &a : assignedCodeVector) a = 0;
-  float distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+  vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
 
   while(codeVectors.size() < maxCodeVectors)
   {
@@ -131,6 +131,7 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
       vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
       if((distortion-newDistortion)/distortion > eps)
         break;
+      distortion = newDistortion;
     }
     codeVectors = newCodeVectors;
   }
