@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 template<typename T>
 std::vector<T> operator+(const std::vector<T> &lhs, const std::vector<T> &rhs)
@@ -111,4 +112,10 @@ std::vector<T> concat(std::vector<T> &lhs, const std::vector<T> &rhs)
   for(size_t i = 0; i < m; i++)
     lhs.emplace_back(rhs[i]);
   return lhs;
+}
+
+template<typename T>
+T inner_product(const std::vector<T> &v)
+{
+  return std::inner_product(v.begin(), v.end(), v.begin());
 }
