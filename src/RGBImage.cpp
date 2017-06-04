@@ -1,4 +1,4 @@
-#include "RGBImage.h"
+#include "RGBImage.hpp"
 #include <fstream>
 #include <cassert>
 #include <iostream>
