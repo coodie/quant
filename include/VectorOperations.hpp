@@ -117,5 +117,5 @@ std::vector<T> concat(std::vector<T> &lhs, const std::vector<T> &rhs)
 template<typename T>
 T inner_product(const std::vector<T> &v)
 {
-  return std::inner_product(v.begin(), v.end(), v.begin());
+  return std::inner_product(v.begin(), v.end(), v.begin(), 0);
 }

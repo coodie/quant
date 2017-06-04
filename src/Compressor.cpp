@@ -74,7 +74,7 @@ vecType getDistortion(const std::vector<vec> &trainingSet,
   return res/((vecType)(M*dim));
 }
 
-std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, float eps)
+std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
 {
   size_t dim = trainingSet[0].size();
   size_t M = trainingSet.size();
@@ -100,6 +100,7 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
     }
 
     // iteration phase
+    std::vector<vec> newCodeVectors;
     for(size_t it = 0; it < MAX_IT; it++)
     {
       vecKDTree kdtree(dim, codeVectors, KD_LEAF_MAX_SIZE);
@@ -111,8 +112,27 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
         assignedCodeVector[i] = found;
       }
 
-      std::vector<vec> newCodeVectors = codeVectors;
+      newCodeVectors = std::vector<vec>(codeVectors.size(), vec());
+      std::vector<size_t> assignedCounts(codeVectors.size());
+
+      for(size_t i = 0; i < M; i++)
+      {
+        int cur = assignedCodeVector[i];
+        const vec &x = trainingSet[i];
+
+        newCodeVectors[cur] += x;
+        assignedCounts[cur] ++;
+      }
+
+      for(size_t i = 0; i < newCodeVectors.size(); i++)
+        if(assignedCounts[i] != 0)
+          newCodeVectors[i] /= (vecType)assignedCounts[i];
+
+      vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+      if((distortion-newDistortion)/distortion > eps)
+        break;
     }
+    codeVectors = newCodeVectors;
   }
   return std::make_pair(codeVectors, assignedCodeVector);
 }
@@ -124,6 +144,9 @@ CompressedImage compress(const RGBImage& image)
   std::vector<vec> trainingSet = getVectorizedBlocks(image, par->width, par->height);
 
   auto x = quantize(trainingSet, par->n, par->eps);
+
+  DEBUG_PRINT(x.first);
+  DEBUG_PRINT(x.second);
 
   return CompressedImage();
 }
