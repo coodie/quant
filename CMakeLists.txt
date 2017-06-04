@@ -3,7 +3,7 @@ project (quant)
 
 include_directories(include)
 include_directories(include/external)
-add_compile_options(--std=c++14 -O3)
+add_compile_options(--std=c++14 -g)
 
 set(src_files
   src/main.cpp

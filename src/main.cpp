@@ -25,7 +25,7 @@ int main(int argc, char **argv)
     (",n", po::value<int>(&par->n)->default_value(10),
      "2^n is number of codevectors")
 
-    (",eps", po::value<float>(&par->eps)->default_value(0.0001),
+    (",eps", po::value<float>(&par->eps)->default_value(0.01),
      "eps parameter for quantization algorithm")
 
     (",w", po::value<int>(&par->width)->default_value(2),

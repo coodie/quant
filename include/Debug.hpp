@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 
-#define DEBUG_PRINT(x) std::cout << "#x = " << (x) << std::endl
+#define DEBUG_PRINT(x) std::cout << #x" = " << (x) << std::endl
 
 template<typename T>
 std::ostream& operator<< (std::ostream& out, const std::vector<T>& v) {

@@ -11,31 +11,45 @@ typedef std::vector<vecType> vec;
 
 namespace
 {
-  std::vector<vec> getVectorizedBlocks(const RGBImage& image, int w, int h)
+  std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
   {
     const std::vector<char> &img = image.img;
 
     const int &xSize = image.xSize*3;
     const int &ySize = image.ySize;
 
-    std::vector<vec> res;
-    for(int i = 0; i < xSize/w; i++)
-      for(int j = 0; j < ySize/h; j++)
-      {
-        vec tmp;
-        tmp.reserve(w*h);
+    size_t wBlocks = (xSize+w-1)/w;
+    size_t hBlocks = (ySize+h-1)/h;
 
-        for(int x = i*w; x < i*w+w; x++)
-          for(int y = j*h; y < j*h+h; y++)
+    std::vector<vec> res(wBlocks*hBlocks);
+
+    for(size_t i = 0; i < wBlocks; i++)
+      for(size_t j = 0; j < hBlocks; j++)
+      {
+        vec tmp(w*h);
+        for(size_t x = i*w; x < i*w+w; x++)
+          for(size_t y = j*h; y < j*h+h; y++)
           {
-            size_t index = x*xSize + y;
-            if(index < img.size())
-              tmp.push_back((vecType)img[index]);
+            size_t imgIndex = x*xSize + y;
+            size_t vecIndex = (x-i*w)*w+(y-j*h);
+            if(imgIndex < img.size())
+              tmp.at(vecIndex) = img.at(imgIndex);
             else
-              tmp.push_back(0.0);
+              tmp.at(vecIndex) = 0.0;
           }
-        res.push_back(std::move(tmp));
+        res.at(i*hBlocks+j) = std::move(tmp);
       }
+    return res;
+  }
+
+  RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
+  {
+    RGBImage res;
+    std::vector<char> imgData(xSize*ySize*3);
+
+    res.img = std::move(imgData);
+    res.xSize = xSize;
+    res.ySize = ySize;
     return res;
   }
 }
@@ -43,7 +57,7 @@ namespace
 typedef KDTreeVectorOfVectorsAdaptor< std::vector<vec>, vecType > vecKDTree;
 
 const int KD_LEAF_MAX_SIZE = 10;
-const int MAX_IT = 50;
+const int MAX_IT = 5;
 
 
 size_t knnSearch(const vecKDTree &kdtree, const vec &pt)
@@ -99,6 +113,8 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
       codeVectors[i+codeVectors.size()/2] *= (vecType)(1.0-eps);
     }
 
+    DEBUG_PRINT(codeVectors);
+
     // iteration phase
     std::vector<vec> newCodeVectors;
     for(size_t it = 0; it < MAX_IT; it++)
@@ -112,7 +128,7 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
         assignedCodeVector[i] = found;
       }
 
-      newCodeVectors = std::vector<vec>(codeVectors.size(), vec());
+      newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
       std::vector<size_t> assignedCounts(codeVectors.size());
 
       for(size_t i = 0; i < M; i++)
@@ -142,12 +158,13 @@ CompressedImage compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
 
-  std::vector<vec> trainingSet = getVectorizedBlocks(image, par->width, par->height);
+  auto trainingSet = getBlocksAsVectorsFromImage(image, par->width, par->height);
 
-  auto x = quantize(trainingSet, par->n, par->eps);
+  std::vector<vec> codeVectors;
+  std::vector<size_t> assignedCodeVector;
+  std::tie(codeVectors, assignedCodeVector) = quantize(trainingSet, par->n, par->eps);
 
-  DEBUG_PRINT(x.first);
-  DEBUG_PRINT(x.second);
+  RGBImage quantizedImg = getImageFromVectors(codeVectors, image.xSize, image.ySize, par->width, par->height);
 
   return CompressedImage();
 }
