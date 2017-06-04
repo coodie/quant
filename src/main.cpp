@@ -54,7 +54,6 @@ int main(int argc, char **argv)
   vm.notify();
 
   RGBImage img(par->file);
-  img.saveToFile(par->saveto);
-
-  CompressedImage cImg = compress(img);
+  RGBImage cImg = compress(img);
+  cImg.saveToFile(par->saveto);
 }

@@ -33,7 +33,7 @@ namespace
             size_t imgIndex = x*xSize + y;
             size_t vecIndex = (x-i*w)*w+(y-j*h);
             if(imgIndex < img.size())
-              tmp.at(vecIndex) = img.at(imgIndex);
+              tmp.at(vecIndex) = (float)img.at(imgIndex);
             else
               tmp.at(vecIndex) = 0.0;
           }
@@ -45,10 +45,29 @@ namespace
   RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
   {
     RGBImage res;
-    std::vector<char> imgData(xSize*ySize*3);
+    xSize *= 3;
+    std::vector<char> imgData(xSize*ySize);
+
+    size_t wBlocks = (xSize+w-1)/w;
+    size_t hBlocks = (ySize+h-1)/h;
+
+    for(size_t i = 0; i < wBlocks; i++)
+      for(size_t j = 0; j < hBlocks; j++)
+        {
+          const vec &tmp = blocks.at(i*hBlocks+j);
+
+          for(size_t x = i*w; x < i*w+w; x++)
+            for(size_t y = j*h; y < j*h+h; y++)
+              {
+                size_t imgIndex = x*xSize + y;
+                size_t vecIndex = (x-i*w)*w+(y-j*h);
+                if(imgIndex < imgData.size())
+                  imgData.at(imgIndex) = (char)tmp.at(vecIndex);
+              }
+        }
 
     res.img = std::move(imgData);
-    res.xSize = xSize;
+    res.xSize = xSize/3;
     res.ySize = ySize;
     return res;
   }
@@ -113,8 +132,6 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
       codeVectors[i+codeVectors.size()/2] *= (vecType)(1.0-eps);
     }
 
-    DEBUG_PRINT(codeVectors);
-
     // iteration phase
     std::vector<vec> newCodeVectors;
     for(size_t it = 0; it < MAX_IT; it++)
@@ -154,7 +171,7 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
   return std::make_pair(codeVectors, assignedCodeVector);
 }
 
-CompressedImage compress(const RGBImage& image)
+RGBImage compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
 
@@ -164,8 +181,13 @@ CompressedImage compress(const RGBImage& image)
   std::vector<size_t> assignedCodeVector;
   std::tie(codeVectors, assignedCodeVector) = quantize(trainingSet, par->n, par->eps);
 
-  RGBImage quantizedImg = getImageFromVectors(codeVectors, image.xSize, image.ySize, par->width, par->height);
+  std::vector<vec> quantizedTrainingSet(trainingSet.size());
 
-  return CompressedImage();
+  for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
+    quantizedTrainingSet[i] = codeVectors[assignedCodeVector[i]];
+
+  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, image.xSize, image.ySize, par->width, par->height);
+
+  return quantizedImg;
 }
 

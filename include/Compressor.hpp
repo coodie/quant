@@ -12,4 +12,4 @@ private:
   int xSize, ySize;
 };
 
-CompressedImage compress(const RGBImage&);
+RGBImage compress(const RGBImage&);
