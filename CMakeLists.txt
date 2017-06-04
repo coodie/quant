@@ -4,8 +4,21 @@ project (quant)
 include_directories(include)
 add_compile_options(--std=c++14)
 
-add_executable(quant
+set(src_files
   src/main.cpp
   src/RGBImage.cpp)
 
+set(used_boost_libs
+  program_options)
+
+find_package(Boost 1.45.0 COMPONENTS ${used_boost_libst}) 
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS}) 
+    add_executable(quant ${src_files})
+    target_link_libraries(quant ${Boost_LIBRARIES})
+endif()
 
