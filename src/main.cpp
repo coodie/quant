@@ -1,5 +1,7 @@
 #include "RGBImage.hpp"
 #include "ProgramParameters.hpp"
+#include "Debug.hpp"
+#include "Compressor.hpp"
 
 #include <iostream>
 #include "boost/program_options.hpp"
@@ -25,10 +27,10 @@ int main(int argc, char **argv)
     (",eps", po::value<float>(&par->eps)->default_value(0.0001),
      "eps parameter for quantization algorithm")
 
-    (",w", po::value<int>(&par->width)->default_value(4),
+    (",w", po::value<int>(&par->width)->default_value(2),
      "Width of block")
 
-    (",h", po::value<int>(&par->height)->default_value(4),
+    (",h", po::value<int>(&par->height)->default_value(2),
      "Height of block")
 
     (",d", po::value<bool>(&par->d)->default_value(false),
@@ -49,4 +51,7 @@ int main(int argc, char **argv)
     return 0;
   }
   vm.notify();
+
+  RGBImage img(par->file);
+  CompressedImage cImg = compress(img);
 }

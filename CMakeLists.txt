@@ -6,7 +6,8 @@ add_compile_options(--std=c++14)
 
 set(src_files
   src/main.cpp
-  src/RGBImage.cpp)
+  src/RGBImage.cpp
+  src/Compressor.cpp)
 
 set(used_boost_libs
   program_options)

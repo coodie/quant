@@ -1,5 +1,5 @@
 #pragma once
-#include "RGBImage.h"
+#include "RGBImage.hpp"
 
 class CompressedImage
 {
@@ -13,4 +13,3 @@ private:
 };
 
 CompressedImage compress(const RGBImage&);
-
