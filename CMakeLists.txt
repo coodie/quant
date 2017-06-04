@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.5.1)
 project (quant)
 
 include_directories(include)
-add_compile_options(--std=c++14)
+include_directories(include/external)
+add_compile_options(--std=c++14 -O3)
 
 set(src_files
   src/main.cpp

@@ -1,3 +1,4 @@
 -I./include
+-I./include/external
 -std=c++14
 -I/usr/include/boost

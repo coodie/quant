@@ -1,22 +1,28 @@
 #include "Compressor.hpp"
 #include "ProgramParameters.hpp"
 #include "Debug.hpp"
+#include <VectorOperations.hpp>
 
-#include <vector>
+typedef float vecType;
+typedef std::vector<vecType> vec;
 
 namespace
 {
-  std::vector<std::vector<float>> getVectorizedBlocks(const RGBImage& image, int w, int h)
+}
+
+namespace
+{
+  std::vector<vec> getVectorizedBlocks(const RGBImage& image, int w, int h)
   {
     const std::vector<int> &img = image.img;
     const int &xSize = image.xSize;
     const int &ySize = image.ySize;
 
-    std::vector<std::vector<float>> res;
+    std::vector<vec> res;
     for(int i = 0; i < xSize/w; i++)
       for(int j = 0; j < ySize/h; j++)
       {
-        std::vector<float> tmp;
+        vec tmp;
         tmp.reserve(w*h);
 
         for(int x = i*w; x < i*w+w; x++)
@@ -24,7 +30,7 @@ namespace
           {
             size_t index = x*xSize + y;
             if(index < img.size())
-              tmp.push_back((float)img[index]);
+              tmp.push_back((vecType)img[index]);
             else
               tmp.push_back(0.0);
           }
@@ -37,9 +43,18 @@ namespace
 CompressedImage compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
-  std::vector<std::vector<float>> blocks = getVectorizedBlocks(image, par->width, par->height);
+  std::vector<vec> blocks = getVectorizedBlocks(image, par->width, par->height);
+  std::vector<vec*> assignedCodeVector(blocks.size());
 
-  DEBUG_PRINT(blocks);
+  std::vector<vec> c(1);
+  c.reserve(1 << par->n);
+  c[0].resize(blocks[0].size());
+
+  // First vector is average
+  for(auto &v : blocks)
+    c[0] += v/(vecType)blocks.size();
+
+
 
   return CompressedImage();
 }
