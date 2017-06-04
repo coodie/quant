@@ -11,7 +11,7 @@ set(src_files
 set(used_boost_libs
   program_options)
 
-find_package(Boost 1.45.0 COMPONENTS ${used_boost_libst}) 
+find_package(Boost COMPONENTS ${used_boost_libs} REQUIRED) 
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
