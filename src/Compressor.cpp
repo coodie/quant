@@ -87,7 +87,7 @@ namespace
     return res/((vecType)(M*dim));
   }
 
-  std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+  std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
     size_t dim = trainingSet[0].size();
     size_t M = trainingSet.size();
@@ -147,27 +147,58 @@ namespace
       }
       codeVectors = newCodeVectors;
     }
-    return std::make_pair(codeVectors, assignedCodeVector);
+    return std::make_tuple(codeVectors, assignedCodeVector, distortion);
   }
-
 }
 
-RGBImage compress(const RGBImage& image)
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
+  
+  size_t blockWidth = par->width;
+  size_t blockHeight = par->height;
 
-  auto trainingSet = getBlocksAsVectorsFromImage(image, par->width, par->height);
+  auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
 
   std::vector<vec> codeVectors;
   std::vector<size_t> assignedCodeVector;
-  std::tie(codeVectors, assignedCodeVector) = quantize(trainingSet, par->n, par->eps);
+  vecType distortion;
+  std::tie(codeVectors, assignedCodeVector, distortion) = quantize(trainingSet, par->n, par->eps);
 
-  std::vector<vec> quantizedTrainingSet(trainingSet.size());
 
+  CompressedImage resImg;
+  resImg.codeVectors = std::move(codeVectors);
+  resImg.assignedCodeVector = std::move(assignedCodeVector);
+  resImg.xSize = image.xSize;
+  resImg.ySize = image.ySize;
+  resImg.blockWidth = blockWidth;
+  resImg.blockHeight = blockHeight;
+
+  CompressionRaport raport{distortion};
+  return std::make_pair(resImg, raport);
+}
+
+void CompressedImage::saveToFile(const std::string &path)
+{
+  throw std::runtime_error("not implemented");
+}
+
+void CompressedImage::loadFromFile(const std::string &path)
+{
+  throw std::runtime_error("not implemented");
+}
+
+RGBImage CompressedImage::convertToPPM()
+{
+  std::vector<vec> quantizedTrainingSet(assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = codeVectors[assignedCodeVector[i]];
 
-  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, image.xSize, image.ySize, par->width, par->height);
-
+  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, xSize, ySize, blockWidth, blockHeight);
   return quantizedImg;
+}
+
+size_t CompressedImage::sizeInBytes()
+{
+  throw std::runtime_error("not implemented");
 }

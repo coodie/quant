@@ -12,7 +12,8 @@ set(src_files
   src/KDTree.cpp)
 
 set(used_boost_libs
-  program_options)
+  program_options
+  iostreams)
 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
