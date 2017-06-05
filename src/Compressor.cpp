@@ -3,11 +3,7 @@
 #include "Debug.hpp"
 
 #include "KDTreeVectorOfVectorsAdaptor.hpp"
-
 #include <VectorOperations.hpp>
-
-typedef double vecType;
-typedef std::vector<vecType> vec;
 
 namespace
 {

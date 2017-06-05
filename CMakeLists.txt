@@ -3,7 +3,7 @@ project (quant)
 
 include_directories(include)
 include_directories(include/external)
-add_compile_options(--std=c++14 -g)
+add_compile_options(--std=c++14 -O3)
 
 set(src_files
   src/main.cpp
@@ -13,10 +13,10 @@ set(src_files
 set(used_boost_libs
   program_options)
 
-find_package(Boost COMPONENTS ${used_boost_libs} REQUIRED) 
-set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost COMPONENTS ${used_boost_libs} REQUIRED) 
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS}) 
