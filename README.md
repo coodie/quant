@@ -1,7 +1,7 @@
 # quant
 Quantization based lossless data compression
 
-This is implementation of VQ algorithm as in [http://www.data-compression.com/vq.shtml](link).
+This is implementation of VQ algorithm as in [http://www.data-compression.com/vq.shtml](http://www.data-compression.com/vq.shtml).
 ## Initial results
 
 | Before compression                                                 | After compression                                                             |
