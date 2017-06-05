@@ -14,7 +14,7 @@ This is implementation of VQ algorithm as in [http://www.data-compression.com/vq
 Make sure you have `cmake`, `gcc` and `boost libraries` installed:
 
 ```
-sudo apt-get cmake gcc install libboost-all-dev
+sudo apt-get install cmake gcc libboost-all-dev
 ```
 
 Pick a directory and clone into it using:
