@@ -69,14 +69,14 @@ namespace
 
 
   const int MAX_IT = 10;
-  
+
   vecType getDistortion(const std::vector<vec> &trainingSet,
                         const std::vector<size_t> &assignedCodeVector,
                         const std::vector<vec> &codeVectors)
   {
     size_t dim = trainingSet[0].size();
     size_t M = trainingSet.size();
-  
+
     vecType res = 0;
     for(size_t i = 0; i < trainingSet.size(); i++)
     {
@@ -86,22 +86,22 @@ namespace
     }
     return res/((vecType)(M*dim));
   }
-  
+
   std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
     size_t dim = trainingSet[0].size();
     size_t M = trainingSet.size();
     size_t maxCodeVectors = 1 << n;
-  
+
     std::vector<size_t> assignedCodeVector(trainingSet.size());
     std::vector<vec> codeVectors(1, vec(dim));
     codeVectors.reserve(maxCodeVectors);
-  
+
     // Initialize values
     for(auto &v : trainingSet) codeVectors[0] += v/(vecType)M;
     for(auto &a : assignedCodeVector) a = 0;
     vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-  
+
     while(codeVectors.size() < maxCodeVectors)
     {
       // splitting phase
@@ -111,35 +111,35 @@ namespace
         codeVectors[i] *= (vecType)(1.0+eps);
         codeVectors[i+codeVectors.size()/2] *= (vecType)(1.0-eps);
       }
-  
+
       // iteration phase
       std::vector<vec> newCodeVectors;
       for(size_t it = 0; it < MAX_IT; it++)
       {
         KDTree kdtree(dim, codeVectors);
-  
+
         for(size_t i = 0; i < M; i++)
         {
           size_t found = kdtree.nearestNeighbour(trainingSet[i]);
           assignedCodeVector[i] = found;
         }
-  
+
         newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
         std::vector<size_t> assignedCounts(codeVectors.size());
-  
+
         for(size_t i = 0; i < M; i++)
         {
           int cur = assignedCodeVector[i];
           const vec &x = trainingSet[i];
-  
+
           newCodeVectors[cur] += x;
           assignedCounts[cur] ++;
         }
-  
+
         for(size_t i = 0; i < newCodeVectors.size(); i++)
           if(assignedCounts[i] != 0)
             newCodeVectors[i] /= (vecType)assignedCounts[i];
-  
+
         vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
          if((distortion-newDistortion)/distortion > eps)
            break;
@@ -171,4 +171,3 @@ RGBImage compress(const RGBImage& image)
 
   return quantizedImg;
 }
-

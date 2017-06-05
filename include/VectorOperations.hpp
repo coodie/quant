@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+
 #include "boost/container/small_vector.hpp"
 
 typedef float vecType;
