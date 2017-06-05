@@ -2,6 +2,10 @@
 Quantization based lossy data compression
 
 This is implementation of VQ algorithm as in [http://www.data-compression.com/vq.shtml](http://www.data-compression.com/vq.shtml).
+
+Here is another nice link explaining the concept:
+![http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php](http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php)
+
 ## Initial results
 
 | Before compression                                                 | After compression                                                             |
