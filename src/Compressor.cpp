@@ -4,6 +4,8 @@
 #include "KDTree.hpp"
 #include "VectorOperations.hpp"
 
+#include "boost/iostreams/  "
+
 namespace
 {
   std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)

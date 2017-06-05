@@ -1,0 +1,12 @@
+sudo: required
+dist: trusty
+language: g++
+compiler: gcc
+before_install:
+ - sudo apt-get install cmake gcc libboost-all-dev
+script:
+ - |
+   mkdir build
+   cd build
+   cmake ..
+   make -j
