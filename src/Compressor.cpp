@@ -1,8 +1,7 @@
 #include "Compressor.hpp"
 #include "ProgramParameters.hpp"
 #include "Debug.hpp"
-
-#include "KDTreeVectorOfVectorsAdaptor.hpp"
+#include "KDTree.hpp"
 #include <VectorOperations.hpp>
 
 namespace
@@ -67,104 +66,90 @@ namespace
     res.ySize = ySize;
     return res;
   }
-}
-
-typedef KDTreeVectorOfVectorsAdaptor< std::vector<vec>, vecType > vecKDTree;
-
-const int KD_LEAF_MAX_SIZE = 10;
-const int MAX_IT = 10;
 
 
-size_t knnSearch(const vecKDTree &kdtree, const vec &pt)
-{
-  static size_t num_results = 1;
-  static std::vector<size_t> ret_indexes(num_results);
-  static std::vector<double> out_dists_sqr(num_results);
-  static nanoflann::KNNResultSet<double> resultSet(num_results);
-  resultSet.init(&ret_indexes[0], &out_dists_sqr[0] );
-  kdtree.index->findNeighbors(resultSet, &pt[0], nanoflann::SearchParams(10));
-  return ret_indexes[0];
-}
-
-vecType getDistortion(const std::vector<vec> &trainingSet,
-                      const std::vector<size_t> &assignedCodeVector,
-                      const std::vector<vec> &codeVectors)
-{
-  size_t dim = trainingSet[0].size();
-  size_t M = trainingSet.size();
-
-  vecType res = 0;
-  for(size_t i = 0; i < trainingSet.size(); i++)
+  const int MAX_IT = 10;
+  
+  vecType getDistortion(const std::vector<vec> &trainingSet,
+                        const std::vector<size_t> &assignedCodeVector,
+                        const std::vector<vec> &codeVectors)
   {
-    const auto &x = trainingSet[i];
-    const auto &c = codeVectors[assignedCodeVector[i]];
-    res += inner_product(x-c);
+    size_t dim = trainingSet[0].size();
+    size_t M = trainingSet.size();
+  
+    vecType res = 0;
+    for(size_t i = 0; i < trainingSet.size(); i++)
+    {
+      const auto &x = trainingSet[i];
+      const auto &c = codeVectors[assignedCodeVector[i]];
+      res += inner_product(x-c);
+    }
+    return res/((vecType)(M*dim));
   }
-  return res/((vecType)(M*dim));
-}
-
-std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
-{
-  size_t dim = trainingSet[0].size();
-  size_t M = trainingSet.size();
-  size_t maxCodeVectors = 1 << n;
-
-  std::vector<size_t> assignedCodeVector(trainingSet.size());
-  std::vector<vec> codeVectors(1, vec(dim));
-  codeVectors.reserve(maxCodeVectors);
-
-  // Initialize values
-  for(auto &v : trainingSet) codeVectors[0] += v/(vecType)M;
-  for(auto &a : assignedCodeVector) a = 0;
-  vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-
-  while(codeVectors.size() < maxCodeVectors)
+  
+  std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
-    // splitting phase
-    concat(codeVectors, codeVectors);
-    for(size_t i = 0; i < codeVectors.size()/2; i++)
+    size_t dim = trainingSet[0].size();
+    size_t M = trainingSet.size();
+    size_t maxCodeVectors = 1 << n;
+  
+    std::vector<size_t> assignedCodeVector(trainingSet.size());
+    std::vector<vec> codeVectors(1, vec(dim));
+    codeVectors.reserve(maxCodeVectors);
+  
+    // Initialize values
+    for(auto &v : trainingSet) codeVectors[0] += v/(vecType)M;
+    for(auto &a : assignedCodeVector) a = 0;
+    vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+  
+    while(codeVectors.size() < maxCodeVectors)
     {
-      codeVectors[i] *= (vecType)(1.0+eps);
-      codeVectors[i+codeVectors.size()/2] *= (vecType)(1.0-eps);
-    }
-
-    // iteration phase
-    std::vector<vec> newCodeVectors;
-    for(size_t it = 0; it < MAX_IT; it++)
-    {
-      vecKDTree kdtree(dim, codeVectors, KD_LEAF_MAX_SIZE);
-      kdtree.index->buildIndex();
-
-      for(size_t i = 0; i < M; i++)
+      // splitting phase
+      concat(codeVectors, codeVectors);
+      for(size_t i = 0; i < codeVectors.size()/2; i++)
       {
-        size_t found = knnSearch(kdtree, trainingSet[i]);
-        assignedCodeVector[i] = found;
+        codeVectors[i] *= (vecType)(1.0+eps);
+        codeVectors[i+codeVectors.size()/2] *= (vecType)(1.0-eps);
       }
-
-      newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
-      std::vector<size_t> assignedCounts(codeVectors.size());
-
-      for(size_t i = 0; i < M; i++)
+  
+      // iteration phase
+      std::vector<vec> newCodeVectors;
+      for(size_t it = 0; it < MAX_IT; it++)
       {
-        int cur = assignedCodeVector[i];
-        const vec &x = trainingSet[i];
-
-        newCodeVectors[cur] += x;
-        assignedCounts[cur] ++;
+        KDTree kdtree(dim, codeVectors);
+  
+        for(size_t i = 0; i < M; i++)
+        {
+          size_t found = kdtree.nearestNeighbour(trainingSet[i]);
+          assignedCodeVector[i] = found;
+        }
+  
+        newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
+        std::vector<size_t> assignedCounts(codeVectors.size());
+  
+        for(size_t i = 0; i < M; i++)
+        {
+          int cur = assignedCodeVector[i];
+          const vec &x = trainingSet[i];
+  
+          newCodeVectors[cur] += x;
+          assignedCounts[cur] ++;
+        }
+  
+        for(size_t i = 0; i < newCodeVectors.size(); i++)
+          if(assignedCounts[i] != 0)
+            newCodeVectors[i] /= (vecType)assignedCounts[i];
+  
+        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+         if((distortion-newDistortion)/distortion > eps)
+           break;
+        distortion = newDistortion;
       }
-
-      for(size_t i = 0; i < newCodeVectors.size(); i++)
-        if(assignedCounts[i] != 0)
-          newCodeVectors[i] /= (vecType)assignedCounts[i];
-
-      vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-       if((distortion-newDistortion)/distortion > eps)
-         break;
-      distortion = newDistortion;
+      codeVectors = newCodeVectors;
     }
-    codeVectors = newCodeVectors;
+    return std::make_pair(codeVectors, assignedCodeVector);
   }
-  return std::make_pair(codeVectors, assignedCodeVector);
+
 }
 
 RGBImage compress(const RGBImage& image)

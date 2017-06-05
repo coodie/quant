@@ -7,7 +7,7 @@
 typedef float vecType;
 typedef boost::container::small_vector<vecType, 16> vec;
 
-vec operator+(const vec &lhs, const vec &rhs)
+static inline vec operator+(const vec &lhs, const vec &rhs)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
@@ -15,14 +15,14 @@ vec operator+(const vec &lhs, const vec &rhs)
   return res;
 }
 
-vec operator+=(vec &lhs, const vec &rhs)
+static inline vec operator+=(vec &lhs, const vec &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
                  [](const vecType &a, const vecType &b){ return a+b; });
   return lhs;
 }
 
-vec operator-(const vec &lhs, const vec &rhs)
+static inline vec operator-(const vec &lhs, const vec &rhs)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
@@ -30,14 +30,14 @@ vec operator-(const vec &lhs, const vec &rhs)
   return res;
 }
 
-vec operator-=(vec &lhs, const vec &rhs)
+static inline vec operator-=(vec &lhs, const vec &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
                  [](const vecType &a, const vecType &b){ return a-b; });
   return lhs;
 }
 
-vec operator*(const vec &lhs, const vec &rhs)
+static inline vec operator*(const vec &lhs, const vec &rhs)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
@@ -45,14 +45,14 @@ vec operator*(const vec &lhs, const vec &rhs)
   return res;
 }
 
-vec operator*=(vec &lhs, const vec &rhs)
+static inline vec operator*=(vec &lhs, const vec &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
                  [](const vecType &a, const vecType &b){ return a*b; });
   return lhs;
 }
 
-vec operator/(const vec &lhs, const vec &rhs)
+static inline vec operator/(const vec &lhs, const vec &rhs)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
@@ -60,14 +60,14 @@ vec operator/(const vec &lhs, const vec &rhs)
   return res;
 }
 
-vec operator/=(vec &lhs, const vec &rhs)
+static inline vec operator/=(vec &lhs, const vec &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
                  [](const vecType &a, const vecType &b){ return a/b; });
   return lhs;
 }
 
-vec operator*(const vec &lhs, const vecType& c)
+static inline vec operator*(const vec &lhs, const vecType& c)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), std::back_inserter(res),
@@ -75,14 +75,14 @@ vec operator*(const vec &lhs, const vecType& c)
   return res;
 }
 
-vec operator*=(vec &lhs, const vecType& c)
+static inline vec operator*=(vec &lhs, const vecType& c)
 {
   std::transform(lhs.begin(), lhs.end(), lhs.begin(),
                  [&](const vecType &a){ return a*c; });
   return lhs;
 }
 
-vec operator/(const vec &lhs, const vecType& c)
+static inline vec operator/(const vec &lhs, const vecType& c)
 {
   vec res;
   std::transform(lhs.begin(), lhs.end(), std::back_inserter(res),
@@ -90,7 +90,7 @@ vec operator/(const vec &lhs, const vecType& c)
   return res;
 }
 
-vec operator/=(vec &lhs, const vecType& c)
+static inline vec operator/=(vec &lhs, const vecType& c)
 {
   std::transform(lhs.begin(), lhs.end(), lhs.begin(),
                  [&](const vecType &a){ return a/c; });
@@ -107,7 +107,7 @@ std::vector<T> concat(std::vector<T> &lhs, const std::vector<T> &rhs)
 }
 
 
-vecType inner_product(const vec &v)
+static inline vecType inner_product(const vec &v)
 {
   return std::inner_product(v.begin(), v.end(), v.begin(), 0);
 }
