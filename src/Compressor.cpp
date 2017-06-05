@@ -2,7 +2,7 @@
 #include "ProgramParameters.hpp"
 #include "Debug.hpp"
 #include "KDTree.hpp"
-#include <VectorOperations.hpp>
+#include "VectorOperations.hpp"
 
 namespace
 {
@@ -154,7 +154,7 @@ namespace
 std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
-  
+
   size_t blockWidth = par->width;
   size_t blockHeight = par->height;
 
@@ -178,27 +178,28 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
   return std::make_pair(resImg, raport);
 }
 
+
+RGBImage decompress(const CompressedImage& cImg)
+{
+  std::vector<vec> quantizedTrainingSet(cImg.assignedCodeVector.size());
+  for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
+    quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
+
+  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
+  return quantizedImg;
+}
+
+size_t CompressedImage::sizeInBytes()
+{
+  throw std::runtime_error("not implemented");
+}
+
 void CompressedImage::saveToFile(const std::string &path)
 {
   throw std::runtime_error("not implemented");
 }
 
 void CompressedImage::loadFromFile(const std::string &path)
-{
-  throw std::runtime_error("not implemented");
-}
-
-RGBImage CompressedImage::convertToPPM()
-{
-  std::vector<vec> quantizedTrainingSet(assignedCodeVector.size());
-  for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
-    quantizedTrainingSet[i] = codeVectors[assignedCodeVector[i]];
-
-  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, xSize, ySize, blockWidth, blockHeight);
-  return quantizedImg;
-}
-
-size_t CompressedImage::sizeInBytes()
 {
   throw std::runtime_error("not implemented");
 }

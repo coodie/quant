@@ -14,7 +14,6 @@ public:
   CompressedImage() = default;
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
-  RGBImage convertToPPM();
   size_t sizeInBytes();
   friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&);
   friend RGBImage decompress(const CompressedImage&);

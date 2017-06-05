@@ -58,5 +58,7 @@ int main(int argc, char **argv)
   CompressionRaport raport;
 
   std::tie(cImg, raport) = compress(img);
-  cImg.convertToPPM().saveToFile(par->saveto);
+
+  RGBImage decompressed = decompress(cImg);
+  decompressed.saveToFile(par->saveto);
 }
