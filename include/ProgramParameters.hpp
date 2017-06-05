@@ -7,7 +7,7 @@ struct ProgramParameters
   int n;
   int width;
   int height;
-  float eps;
+  double eps;
   bool d;
   std::string file;
   std::string saveto;

@@ -22,16 +22,16 @@ int main(int argc, char **argv)
 
   desc.add_options()
     ("help", "Print help messages")
-    (",n", po::value<int>(&par->n)->default_value(10),
+    (",n", po::value<int>(&par->n)->default_value(8),
      "2^n is number of codevectors")
 
-    (",eps", po::value<float>(&par->eps)->default_value(0.01),
+    (",e", po::value<double>(&par->eps)->default_value(0.0001),
      "eps parameter for quantization algorithm")
 
-    (",w", po::value<int>(&par->width)->default_value(2),
+    (",w", po::value<int>(&par->width)->default_value(3),
      "Width of block")
 
-    (",h", po::value<int>(&par->height)->default_value(2),
+    (",h", po::value<int>(&par->height)->default_value(3),
      "Height of block")
 
     (",d", po::value<bool>(&par->d)->default_value(false),

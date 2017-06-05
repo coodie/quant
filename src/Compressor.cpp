@@ -6,7 +6,7 @@
 
 #include <VectorOperations.hpp>
 
-typedef float vecType;
+typedef double vecType;
 typedef std::vector<vecType> vec;
 
 namespace
@@ -31,7 +31,7 @@ namespace
           for(size_t y = j*h; y < j*h+h; y++)
           {
             size_t imgIndex = x*ySize + y;
-            size_t vecIndex = (x-i*w)*w+(y-j*h);
+            size_t vecIndex = (x-i*w)*h+(y-j*h);
             if(imgIndex < img.size())
               tmp.at(vecIndex) = (float)img.at(imgIndex);
             else
@@ -60,7 +60,7 @@ namespace
             for(size_t y = j*h; y < j*h+h; y++)
               {
                 size_t imgIndex = x*ySize + y;
-                size_t vecIndex = (x-i*w)*w+(y-j*h);
+                size_t vecIndex = (x-i*w)*h+(y-j*h);
                 if(imgIndex < imgData.size())
                   imgData.at(imgIndex) = (char)tmp.at(vecIndex);
               }
@@ -76,7 +76,7 @@ namespace
 typedef KDTreeVectorOfVectorsAdaptor< std::vector<vec>, vecType > vecKDTree;
 
 const int KD_LEAF_MAX_SIZE = 10;
-const int MAX_IT = 5;
+const int MAX_IT = 10;
 
 
 size_t knnSearch(const vecKDTree &kdtree, const vec &pt)
@@ -162,8 +162,8 @@ std::pair<std::vector<vec>, std::vector<size_t>> quantize(const std::vector<vec>
           newCodeVectors[i] /= (vecType)assignedCounts[i];
 
       vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-      if((distortion-newDistortion)/distortion > eps)
-        break;
+       if((distortion-newDistortion)/distortion > eps)
+         break;
       distortion = newDistortion;
     }
     codeVectors = newCodeVectors;
