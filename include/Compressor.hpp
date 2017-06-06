@@ -8,7 +8,8 @@ class CompressionRaport
 public:
   float distortion;
   float bitsPerPixel;
-  std::time_t compressionTime;
+  std::chrono::duration<double> compressionTime;
+  friend std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport);
 };
 
 class CompressedImage
@@ -17,7 +18,7 @@ public:
   CompressedImage() = default;
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
-  size_t sizeInBytes();
+  size_t sizeInBits();
   friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&);
   friend RGBImage decompress(const CompressedImage&);
 

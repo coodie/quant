@@ -34,14 +34,13 @@ int main(int argc, char **argv)
     (",h", po::value<int>(&par->height)->default_value(3),
      "Height of block")
 
-    (",d", po::value<bool>(&par->d)->default_value(false),
-     "Specify whether to compress or decompress")
-
     ("file", po::value<std::string>(&par->file)->required(),
      "File to compress/decompress")
 
     ("saveto,o", po::value<std::string>(&par->saveto)->required(),
-     "Save to");
+     "Save to")
+    (",r", po::value<bool>(&par->raport)->default_value(true),
+     "Print raport to std::out");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -58,7 +57,8 @@ int main(int argc, char **argv)
   CompressionRaport raport;
 
   std::tie(cImg, raport) = compress(img);
-
+  if(par->raport)
+    std::cout << raport;
   RGBImage decompressed = decompress(cImg);
   decompressed.saveToFile(par->saveto);
 }

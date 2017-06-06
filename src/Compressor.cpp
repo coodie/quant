@@ -4,9 +4,8 @@
 #include "KDTree.hpp"
 #include "VectorOperations.hpp"
 
-#include "boost/dynamic_bitset.hpp"
-
 #include <fstream>
+#include <chrono>
 
 namespace
 {
@@ -158,17 +157,20 @@ namespace
 std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 {
   ProgramParameters *par = getParams();
-
   size_t blockWidth = par->width;
   size_t blockHeight = par->height;
 
-  auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
 
+  auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
   std::vector<vec> codeVectors;
   std::vector<size_t> assignedCodeVector;
   vecType distortion;
   std::tie(codeVectors, assignedCodeVector, distortion) = quantize(trainingSet, par->n, par->eps);
 
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> compressionTime = end-start;
 
   CompressedImage resImg;
   resImg.codeVectors = std::move(codeVectors);
@@ -178,7 +180,8 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
   resImg.blockWidth = blockWidth;
   resImg.blockHeight = blockHeight;
 
-  CompressionRaport raport{distortion};
+  float bitsPerPixel = ((float)resImg.sizeInBits())/(image.xSize*image.ySize);
+  CompressionRaport raport{distortion, bitsPerPixel, compressionTime};
   return std::make_pair(resImg, raport);
 }
 
@@ -200,14 +203,15 @@ size_t smallestPow2(size_t n)
   return 1 << p;
 }
 
-size_t CompressedImage::sizeInBytes()
+size_t CompressedImage::sizeInBits()
 {
   // At this moment approximate size
   size_t codeVectorBits = smallestPow2(codeVectors.size()-1);
   size_t dimension = blockWidth*blockHeight;
   size_t bits = codeVectorBits*assignedCodeVector.size() + // Store image data
-    dimension*codeVectors.size()*sizeof(char); // store codevectors
-  return (bits+7)/8;
+    dimension*codeVectors.size()*sizeof(char); // Store codevectors
+
+  return ((bits+7)/8)*8; //align
 }
 
 void CompressedImage::saveToFile(const std::string &path)
@@ -231,3 +235,13 @@ void CompressedImage::loadFromFile(const std::string &path)
   for(auto &cv : codeVectors) for(auto &c : cv) file >> c;
   for(auto &a : assignedCodeVector) file >> a;
 }
+
+std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport)
+{
+  stream << "Compression raport: " << std::endl;
+  stream << "distortion       = " << raport.distortion << std::endl;
+  stream << "bits per pixel   = " << raport.bitsPerPixel << std::endl;
+  stream << "compression time = " << raport.compressionTime.count() << "s" << std::endl;
+  return stream;
+}
+

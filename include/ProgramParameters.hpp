@@ -9,6 +9,7 @@ struct ProgramParameters
   int height;
   float eps;
   bool d;
+  bool raport;
   std::string file;
   std::string saveto;
 };
