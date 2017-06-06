@@ -1,11 +1,14 @@
 #pragma once
 #include "RGBImage.hpp"
 #include "VectorOperations.hpp"
+#include <chrono>
 
 class CompressionRaport
 {
 public:
-  vecType distortion;
+  float distortion;
+  float bitsPerPixel;
+  std::time_t compressionTime;
 };
 
 class CompressedImage

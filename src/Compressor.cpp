@@ -4,7 +4,9 @@
 #include "KDTree.hpp"
 #include "VectorOperations.hpp"
 
-#include "boost/iostreams/  "
+#include "boost/dynamic_bitset.hpp"
+
+#include <fstream>
 
 namespace
 {
@@ -191,17 +193,41 @@ RGBImage decompress(const CompressedImage& cImg)
   return quantizedImg;
 }
 
+size_t smallestPow2(size_t n)
+{
+  int p = 0;
+  while(n/=2) p++;
+  return 1 << p;
+}
+
 size_t CompressedImage::sizeInBytes()
 {
-  throw std::runtime_error("not implemented");
+  // At this moment approximate size
+  size_t codeVectorBits = smallestPow2(codeVectors.size()-1);
+  size_t dimension = blockWidth*blockHeight;
+  size_t bits = codeVectorBits*assignedCodeVector.size() + // Store image data
+    dimension*codeVectors.size()*sizeof(char); // store codevectors
+  return (bits+7)/8;
 }
 
 void CompressedImage::saveToFile(const std::string &path)
 {
-  throw std::runtime_error("not implemented");
+  std::fstream file(path, std::fstream::out | std::fstream::trunc | std::fstream::binary);
+  file << xSize << " " << ySize << " " << blockWidth << " " << blockHeight << " " << codeVectors.size();
+
+  for(auto &cv : codeVectors) for(auto &c : cv) file << (char)c;
+  for(auto &a : assignedCodeVector) file << a;
 }
 
 void CompressedImage::loadFromFile(const std::string &path)
 {
   throw std::runtime_error("not implemented");
+
+  std::fstream file(path, std::fstream::in | std::fstream::binary);
+  size_t codeVectorsSize;
+  file >> xSize >> ySize >> blockWidth >> blockHeight >> codeVectorsSize;
+
+  codeVectors = std::vector<vec>(codeVectorsSize, vec(blockWidth*blockHeight));
+  for(auto &cv : codeVectors) for(auto &c : cv) file >> c;
+  for(auto &a : assignedCodeVector) file >> a;
 }
