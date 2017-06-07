@@ -89,21 +89,6 @@ namespace
     return res/((vecType)(M*dim));
   }
 
-  template<typename T>
-  void removeMarked(std::vector<T> &v, const std::vector<bool> &marked)
-  {
-    int last = 0;
-    for(int i = 0; i < v.size(); ++i, ++last)
-      {
-        while(marked[i])
-          ++i;
-        if(i >= v.size()) break;
-        v[last] = v[i];
-      }
-
-    v.resize(last);
-  }
-
   void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
   {
     size_t dim = trainingSet.front().size();
@@ -150,7 +135,7 @@ namespace
         assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
 
         newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
-        std::vector<size_t> assignedCounts(codeVectors.size());
+        std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
 
         for(size_t i = 0; i < M; i++)
         {
@@ -158,20 +143,23 @@ namespace
           const vec &x = trainingSet[i];
 
           newCodeVectors[cur] += x;
-          assignedCounts[cur] ++;
+          codeVectorArea[cur].push_back(i);
         }
 
-        std::vector<bool> removable(codeVectors.size(), false);
+
+        auto& biggestArea = *std::max_element(begin(codeVectorArea), end(codeVectorArea),
+                                              [](const std::vector<size_t> &a,  const std::vector<size_t> &b)
+                                              {
+                                                return a.size() < b.size();
+                                              });
 
         for(size_t i = 0; i < newCodeVectors.size(); i++)
         {
-          if(assignedCounts[i] != 0)
-            newCodeVectors[i] /= (vecType)assignedCounts[i];
+          if(codeVectorArea[i].size() != 0)
+            newCodeVectors[i] /= (vecType)codeVectorArea.size();
           else
-            removable[i] = true;
+            newCodeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
         }
-
-        removeMarked(newCodeVectors, removable);
 
         vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
         if((distortion-newDistortion)/distortion > eps)
