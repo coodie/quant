@@ -4,7 +4,7 @@ function fix_image()
 {
     local in=$1
     local out=$2
-    ../build/quant --file $in -o $out
+    ../build/quant --file $in -o $out -n 3 -w 1 -h 1
     local in_png="${in%.*}.png"
     local out_png="${out%.*}.png"
 

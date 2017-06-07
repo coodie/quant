@@ -140,9 +140,7 @@ namespace
         for(size_t i = 0; i < M; i++)
         {
           int cur = assignedCodeVector[i];
-          const vec &x = trainingSet[i];
-
-          newCodeVectors[cur] += x;
+          newCodeVectors[cur] += trainingSet[i];
           codeVectorArea[cur].push_back(i);
         }
 
@@ -156,21 +154,24 @@ namespace
         for(size_t i = 0; i < newCodeVectors.size(); i++)
         {
           if(codeVectorArea[i].size() != 0)
-            newCodeVectors[i] /= (vecType)codeVectorArea.size();
+            newCodeVectors[i] /= (vecType)codeVectorArea[i].size();
           else
             newCodeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
         }
 
-        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, newCodeVectors);
         if((distortion-newDistortion)/distortion > eps)
-           break;
+        {
+          distortion = newDistortion;
+          break;
+        }
         distortion = newDistortion;
       }
       codeVectors = newCodeVectors;
     }
 
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-
+    distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
     return std::make_tuple(codeVectors, assignedCodeVector, distortion);
   }
 }
