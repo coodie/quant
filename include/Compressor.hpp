@@ -6,7 +6,7 @@
 class CompressionRaport
 {
 public:
-  float distortion;
+  vecType distortion;
   float bitsPerPixel;
   std::chrono::duration<double> compressionTime;
   friend std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport);

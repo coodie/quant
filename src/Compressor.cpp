@@ -9,6 +9,16 @@
 
 namespace
 {
+  vecType scale(char x)
+  {
+    return (((vecType)x)+127.0)/255.0;
+  }
+
+  char unscale(vecType x)
+  {
+    return char(((x*255.0)-127.0));
+  }
+
   std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
   {
     const std::vector<char> &img = image.img;
@@ -31,9 +41,9 @@ namespace
             size_t imgIndex = x*ySize + y;
             size_t vecIndex = (x-i*w)*h+(y-j*h);
             if(imgIndex < img.size())
-              tmp.at(vecIndex) = (float)img.at(imgIndex);
+              tmp.at(vecIndex) = scale(img.at(imgIndex));
             else
-              tmp.at(vecIndex) = 0.0;
+              tmp.at(vecIndex) = 0.5;
           }
         res.at(i*hBlocks+j) = std::move(tmp);
       }
@@ -60,7 +70,7 @@ namespace
                 size_t imgIndex = x*ySize + y;
                 size_t vecIndex = (x-i*w)*h+(y-j*h);
                 if(imgIndex < imgData.size())
-                  imgData.at(imgIndex) = (char)tmp.at(vecIndex);
+                  imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
               }
         }
 
@@ -101,12 +111,40 @@ namespace
     }
   }
 
-  const int MAX_IT = 3;
+  void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, const std::vector<size_t> &assignedCodeVector)
+  {
+    std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
+
+    for(auto &a : codeVectors) for(auto &b : a) b = 0.0;
+
+    for(size_t i = 0; i < trainingSet.size(); i++)
+      {
+        int cur = assignedCodeVector[i];
+        codeVectors[cur] += trainingSet[i];
+        codeVectorArea[cur].push_back(i);
+      }
+
+
+    auto& biggestArea = *std::max_element(begin(codeVectorArea), end(codeVectorArea),
+                                          [](const std::vector<size_t> &a,  const std::vector<size_t> &b)
+                                          {
+                                            return a.size() < b.size();
+                                          });
+
+    for(size_t i = 0; i < codeVectors.size(); i++)
+      {
+        if(codeVectorArea[i].size() != 0)
+          codeVectors[i] /= (vecType)(codeVectorArea[i].size());
+        else
+          codeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
+      }
+  }
+
+  const int MAX_IT = 5;
 
   std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
     size_t dim = trainingSet[0].size();
-    size_t M = trainingSet.size();
     size_t maxCodeVectors = 1 << n;
 
     std::vector<size_t> assignedCodeVector(trainingSet.size());
@@ -114,7 +152,8 @@ namespace
     codeVectors.reserve(maxCodeVectors);
 
     // Initialize values
-    for(auto &v : trainingSet) codeVectors[0] += v/(vecType)M;
+    for(auto &v : trainingSet) codeVectors[0] += v;
+    codeVectors[0] /= (vecType)(trainingSet.size());
     for(auto &a : assignedCodeVector) a = 0;
     vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
 
@@ -133,31 +172,9 @@ namespace
       for(size_t it = 0; it < MAX_IT; it++)
       {
         assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-
         newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
-        std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
 
-        for(size_t i = 0; i < M; i++)
-        {
-          int cur = assignedCodeVector[i];
-          newCodeVectors[cur] += trainingSet[i];
-          codeVectorArea[cur].push_back(i);
-        }
-
-
-        auto& biggestArea = *std::max_element(begin(codeVectorArea), end(codeVectorArea),
-                                              [](const std::vector<size_t> &a,  const std::vector<size_t> &b)
-                                              {
-                                                return a.size() < b.size();
-                                              });
-
-        for(size_t i = 0; i < newCodeVectors.size(); i++)
-        {
-          if(codeVectorArea[i].size() != 0)
-            newCodeVectors[i] /= (vecType)codeVectorArea[i].size();
-          else
-            newCodeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
-        }
+        fixCodeVectors(trainingSet, newCodeVectors, assignedCodeVector);
 
         vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, newCodeVectors);
         if((distortion-newDistortion)/distortion > eps)
