@@ -43,7 +43,7 @@ namespace
             if(imgIndex < img.size())
               tmp.at(vecIndex) = scale(img.at(imgIndex));
             else
-              tmp.at(vecIndex) = 0.5;
+              tmp.at(vecIndex) = 1;
           }
         res.at(i*hBlocks+j) = std::move(tmp);
       }
@@ -79,8 +79,6 @@ namespace
     res.ySize = ySize;
     return res;
   }
-
-
 
   vecType getDistortion(const std::vector<vec> &trainingSet,
                         const std::vector<size_t> &assignedCodeVector,
@@ -214,8 +212,6 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 
   end = std::chrono::system_clock::now();
   std::chrono::duration<double> compressionTime = end-start;
-
-  std::cout << codeVectors << std::endl;
 
   CompressedImage resImg;
   resImg.codeVectors = std::move(codeVectors);
