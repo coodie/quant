@@ -111,7 +111,7 @@ namespace
     }
   }
 
-  void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, const std::vector<size_t> &assignedCodeVector)
+  bool fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
   {
     std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
 
@@ -131,16 +131,22 @@ namespace
                                             return a.size() < b.size();
                                           });
 
+    bool zero = false;
     for(size_t i = 0; i < codeVectors.size(); i++)
       {
-        if(codeVectorArea[i].size() != 0)
+        if(codeVectorArea[i].size() > 0)
           codeVectors[i] /= (vecType)(codeVectorArea[i].size());
         else
-          codeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
+          {
+            zero = true;
+            codeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
+          }
       }
+    assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+    return zero;
   }
 
-  const int MAX_IT = 5;
+  const int MAX_IT = 20;
 
   std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
@@ -159,6 +165,7 @@ namespace
 
     while(codeVectors.size() < maxCodeVectors)
     {
+
       // splitting phase
       concat(codeVectors, codeVectors);
       for(size_t i = 0; i < codeVectors.size()/2; i++)
@@ -168,15 +175,12 @@ namespace
       }
 
       // iteration phase
-      std::vector<vec> newCodeVectors;
       for(size_t it = 0; it < MAX_IT; it++)
       {
         assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-        newCodeVectors = std::vector<vec>(codeVectors.size(), vec(dim));
+        while(fixCodeVectors(trainingSet, codeVectors, assignedCodeVector));
 
-        fixCodeVectors(trainingSet, newCodeVectors, assignedCodeVector);
-
-        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, newCodeVectors);
+        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
         if((distortion-newDistortion)/distortion > eps)
         {
           distortion = newDistortion;
@@ -184,10 +188,10 @@ namespace
         }
         distortion = newDistortion;
       }
-      codeVectors = newCodeVectors;
     }
 
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+    while(fixCodeVectors(trainingSet, codeVectors, assignedCodeVector));
     distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
     return std::make_tuple(codeVectors, assignedCodeVector, distortion);
   }
@@ -210,6 +214,8 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 
   end = std::chrono::system_clock::now();
   std::chrono::duration<double> compressionTime = end-start;
+
+  std::cout << codeVectors << std::endl;
 
   CompressedImage resImg;
   resImg.codeVectors = std::move(codeVectors);
@@ -271,6 +277,7 @@ void CompressedImage::loadFromFile(const std::string &path)
   file >> xSize >> ySize >> blockWidth >> blockHeight >> codeVectorsSize;
 
   codeVectors = std::vector<vec>(codeVectorsSize, vec(blockWidth*blockHeight));
+
   for(auto &cv : codeVectors) for(auto &c : cv) file >> c;
   for(auto &a : assignedCodeVector) file >> a;
 }
