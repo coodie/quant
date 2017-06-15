@@ -4,6 +4,7 @@
 #include "KDTree.hpp"
 #include "VectorOperations.hpp"
 
+#include <set>
 #include <fstream>
 #include <chrono>
 
@@ -11,12 +12,12 @@ namespace
 {
   vecType scale(char x)
   {
-    return (((vecType)x)+127.0)/255.0;
+    return (((vecType)x)+128.0)/255.0;
   }
 
   char unscale(vecType x)
   {
-    return char(((x*255.0)-127.0));
+    return char((std::round(x*255.0)-128.0));
   }
 
   std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
@@ -70,7 +71,13 @@ namespace
                 size_t imgIndex = x*ySize + y;
                 size_t vecIndex = (x-i*w)*h+(y-j*h);
                 if(imgIndex < imgData.size())
-                  imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
+                {
+                  if(imgIndex % 3 == 0)
+                    imgData.at(imgIndex) = unscale(tmp.at(vecIndex))+50;
+                  else
+                    imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
+
+                }
               }
         }
 
@@ -109,39 +116,73 @@ namespace
     }
   }
 
-  bool fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
+  template<typename T, typename cmp>
+  T extract_max(std::set<T, cmp> &q)
+  {
+    auto it = q.begin();
+    T tmp(std::move(*it));
+    q.erase(it);
+    return tmp;
+  }
+
+  template<typename T, typename cmp>
+  T extract_min(std::set<T, cmp> &q)
+  {
+    auto it = --(q.end());
+    T tmp(std::move(*it));
+    q.erase(it);
+    return tmp;
+  }
+
+  void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
   {
     std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
 
-    for(auto &a : codeVectors) for(auto &b : a) b = 0.0;
 
     for(size_t i = 0; i < trainingSet.size(); i++)
-      {
-        int cur = assignedCodeVector[i];
-        codeVectors[cur] += trainingSet[i];
-        codeVectorArea[cur].push_back(i);
-      }
+    {
+      int cur = assignedCodeVector[i];
+      codeVectorArea[cur].push_back(i);
+    }
 
+    auto cmp = [](const std::vector<size_t> &a, const std::vector<size_t> &b)
+    {
+      return a.size() < b.size();
+    };
 
-    auto& biggestArea = *std::max_element(begin(codeVectorArea), end(codeVectorArea),
-                                          [](const std::vector<size_t> &a,  const std::vector<size_t> &b)
-                                          {
-                                            return a.size() < b.size();
-                                          });
+    std::set<std::vector<size_t>, decltype(cmp)> q(cmp);
 
-    bool zero = false;
+    for(auto &a : codeVectorArea)
+      q.emplace(std::move(a));
+    codeVectorArea.clear();
+
+    while(q.rbegin()->size() == 0)
+    {
+      auto mx = extract_max(q);
+      auto mn = extract_min(q);
+
+      std::copy(std::begin(mx), std::begin(mx)+mx.size()/2, std::back_inserter(mn));
+
+      mx.erase(mx.begin()+mx.size()/2, mx.end());
+
+      q.emplace(std::move(mx));
+      q.emplace(std::move(mn));
+    }
+
+    for(auto &a : q)
+      codeVectorArea.emplace_back(std::move(a));
+    q.clear();
+
+    for(auto &a : codeVectors) for(auto &b : a) b = 0.0;
+
     for(size_t i = 0; i < codeVectors.size(); i++)
-      {
-        if(codeVectorArea[i].size() > 0)
-          codeVectors[i] /= (vecType)(codeVectorArea[i].size());
-        else
-          {
-            zero = true;
-            codeVectors[i] = trainingSet[biggestArea[std::rand() % biggestArea.size()]];
-          }
-      }
+    {
+      for(auto &x : codeVectorArea[i])
+        codeVectors[i] += trainingSet.at(x);
+      codeVectors[i] /= codeVectorArea[i].size();
+    }
+
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-    return zero;
   }
 
   const int MAX_IT = 20;
@@ -175,8 +216,9 @@ namespace
       // iteration phase
       for(size_t it = 0; it < MAX_IT; it++)
       {
+        std::cout << it << std::endl;
         assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-        while(fixCodeVectors(trainingSet, codeVectors, assignedCodeVector));
+        fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
 
         vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
         if((distortion-newDistortion)/distortion > eps)
@@ -189,10 +231,23 @@ namespace
     }
 
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-    while(fixCodeVectors(trainingSet, codeVectors, assignedCodeVector));
+    fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
     distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
     return std::make_tuple(codeVectors, assignedCodeVector, distortion);
   }
+}
+
+std::chrono::duration<double> measureExecutionTime(const std::function<void()> &f)
+{
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+
+  f();
+
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> executionTime = end-start;
+
+  return executionTime;
 }
 
 std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
@@ -201,17 +256,14 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
   size_t blockWidth = par->width;
   size_t blockHeight = par->height;
 
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-  start = std::chrono::system_clock::now();
-
-  auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
   std::vector<vec> codeVectors;
   std::vector<size_t> assignedCodeVector;
   vecType distortion;
-  std::tie(codeVectors, assignedCodeVector, distortion) = quantize(trainingSet, par->n, par->eps);
 
-  end = std::chrono::system_clock::now();
-  std::chrono::duration<double> compressionTime = end-start;
+  auto compressionTime = measureExecutionTime([&](){
+      auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
+      std::tie(codeVectors, assignedCodeVector, distortion) = quantize(trainingSet, par->n, par->eps);
+    });
 
   CompressedImage resImg;
   resImg.codeVectors = std::move(codeVectors);
@@ -286,4 +338,3 @@ std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport)
   stream << "compression time = " << raport.compressionTime.count() << "s" << std::endl;
   return stream;
 }
-
