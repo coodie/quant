@@ -24,8 +24,8 @@ namespace
   {
     const std::vector<char> &img = image.img;
 
-    const int &xSize = image.xSize*3;
-    const int &ySize = image.ySize;
+    const int &xSize = image.xSize;
+    const int &ySize = image.ySize*3;
 
     size_t wBlocks = (xSize+w-1)/w;
     size_t hBlocks = (ySize+h-1)/h;
@@ -54,7 +54,7 @@ namespace
   RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
   {
     RGBImage res;
-    xSize *= 3;
+    ySize *= 3;
     std::vector<char> imgData(xSize*ySize);
 
     size_t wBlocks = (xSize+w-1)/w;
@@ -71,19 +71,13 @@ namespace
                 size_t imgIndex = x*ySize + y;
                 size_t vecIndex = (x-i*w)*h+(y-j*h);
                 if(imgIndex < imgData.size())
-                {
-                  if(imgIndex % 3 == 0)
-                    imgData.at(imgIndex) = unscale(tmp.at(vecIndex))+50;
-                  else
-                    imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
-
-                }
+                  imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
               }
         }
 
     res.img = std::move(imgData);
-    res.xSize = xSize/3;
-    res.ySize = ySize;
+    res.xSize = xSize;
+    res.ySize = ySize/3;
     return res;
   }
 
