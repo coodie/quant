@@ -12,20 +12,20 @@ namespace
 {
   vecType scale(char x)
   {
-    return (((vecType)x)+128.0)/255.0;
+    return (((vecType)x));
   }
 
   char unscale(vecType x)
   {
-    return char((std::round(x*255.0)-128.0));
+    return char((std::round(x)));
   }
 
   std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
   {
-    const std::vector<char> &img = image.img;
+    const std::vector<RGB> &img = image.img;
 
-    const int &xSize = image.xSize;
-    const int &ySize = image.ySize*3;
+    int xSize = image.xSize;
+    int ySize = image.ySize;
 
     size_t wBlocks = (xSize+w-1)/w;
     size_t hBlocks = (ySize+h-1)/h;
@@ -35,16 +35,17 @@ namespace
     for(size_t i = 0; i < wBlocks; i++)
       for(size_t j = 0; j < hBlocks; j++)
       {
-        vec tmp(w*h);
+        vec tmp(3*w*h);
         for(size_t x = i*w; x < i*w+w; x++)
           for(size_t y = j*h; y < j*h+h; y++)
           {
             size_t imgIndex = x*ySize + y;
             size_t vecIndex = (x-i*w)*h+(y-j*h);
-            if(imgIndex < img.size())
-              tmp.at(vecIndex) = scale(img.at(imgIndex));
-            else
-              tmp.at(vecIndex) = 1;
+            for(auto shift : RGBRange)
+              if(imgIndex < img.size())
+                tmp.at(vecIndex+shift) = scale(img.at(imgIndex).at(shift));
+              else
+                tmp.at(vecIndex+shift) = 0;
           }
         res.at(i*hBlocks+j) = std::move(tmp);
       }
@@ -53,12 +54,10 @@ namespace
 
   RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
   {
-    RGBImage res;
-    ySize *= 3;
-    std::vector<char> imgData(xSize*ySize);
-
     size_t wBlocks = (xSize+w-1)/w;
     size_t hBlocks = (ySize+h-1)/h;
+
+    std::vector<RGB> imgData(xSize*ySize);
 
     for(size_t i = 0; i < wBlocks; i++)
       for(size_t j = 0; j < hBlocks; j++)
@@ -67,18 +66,20 @@ namespace
 
           for(size_t x = i*w; x < i*w+w; x++)
             for(size_t y = j*h; y < j*h+h; y++)
-              {
-                size_t imgIndex = x*ySize + y;
-                size_t vecIndex = (x-i*w)*h+(y-j*h);
-                if(imgIndex < imgData.size())
-                  imgData.at(imgIndex) = unscale(tmp.at(vecIndex));
-              }
+            {
+              size_t imgIndex = x*ySize + y;
+              size_t vecIndex = (x-i*w)*h+(y-j*h);
+              if(imgIndex < imgData.size())
+                for(auto shift : RGBRange)
+                  imgData.at(imgIndex).at(shift) = unscale(tmp.at(vecIndex+shift));
+            }
         }
 
-    res.img = std::move(imgData);
-    res.xSize = xSize;
-    res.ySize = ySize/3;
-    return res;
+    RGBImage img;
+    img.ySize = ySize;
+    img.xSize = xSize;
+    img.img = std::move(imgData);
+    return img;
   }
 
   vecType getDistortion(const std::vector<vec> &trainingSet,
@@ -179,7 +180,7 @@ namespace
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
   }
 
-  const int MAX_IT = 20;
+  const int MAX_IT = 50;
 
   std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
@@ -203,24 +204,25 @@ namespace
       concat(codeVectors, codeVectors);
       for(size_t i = 0; i < codeVectors.size()/2; i++)
       {
-        codeVectors[i] *= (vecType)(1+eps);
-        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-eps);
+        codeVectors[i] *= (vecType)(1+0.01);
+        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.01);
       }
 
       // iteration phase
       for(size_t it = 0; it < MAX_IT; it++)
       {
-        std::cout << it << std::endl;
         assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
         fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
 
         vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-        if((distortion-newDistortion)/distortion > eps)
-        {
-          distortion = newDistortion;
-          break;
-        }
+        //if((distortion-newDistortion)/distortion <= eps)
+        //{
+        //  distortion = newDistortion;
+        //  break;
+        //}
         distortion = newDistortion;
+        DEBUG_PRINT(it);
+        DEBUG_PRINT(distortion);
       }
     }
 
@@ -256,7 +258,8 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
 
   auto compressionTime = measureExecutionTime([&](){
       auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
-      std::tie(codeVectors, assignedCodeVector, distortion) = quantize(trainingSet, par->n, par->eps);
+      std::tie(codeVectors, assignedCodeVector, distortion) =
+          quantize(trainingSet, par->n, par->eps);
     });
 
   CompressedImage resImg;
@@ -278,9 +281,8 @@ RGBImage decompress(const CompressedImage& cImg)
   std::vector<vec> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
-
-  RGBImage quantizedImg = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
-  return quantizedImg;
+  RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
+  return res;
 }
 
 size_t smallestPow2(size_t n)
@@ -303,25 +305,12 @@ size_t CompressedImage::sizeInBits()
 
 void CompressedImage::saveToFile(const std::string &path)
 {
-  std::fstream file(path, std::fstream::out | std::fstream::trunc | std::fstream::binary);
-  file << xSize << " " << ySize << " " << blockWidth << " " << blockHeight << " " << codeVectors.size();
-
-  for(auto &cv : codeVectors) for(auto &c : cv) file << (char)c;
-  for(auto &a : assignedCodeVector) file << a;
+  throw std::runtime_error("not implemented");
 }
 
 void CompressedImage::loadFromFile(const std::string &path)
 {
   throw std::runtime_error("not implemented");
-
-  std::fstream file(path, std::fstream::in | std::fstream::binary);
-  size_t codeVectorsSize;
-  file >> xSize >> ySize >> blockWidth >> blockHeight >> codeVectorsSize;
-
-  codeVectors = std::vector<vec>(codeVectorsSize, vec(blockWidth*blockHeight));
-
-  for(auto &cv : codeVectors) for(auto &c : cv) file >> c;
-  for(auto &a : assignedCodeVector) file >> a;
 }
 
 std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport)

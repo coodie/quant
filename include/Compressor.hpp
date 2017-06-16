@@ -14,7 +14,7 @@ public:
 
 class CompressedImage
 {
-public: 
+public:
   CompressedImage() = default;
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
