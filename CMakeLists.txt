@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.2.2)
 project (quant)
 
+####### Compiler options
+add_compile_options(--std=c++14 -O3 -g -Wall)
+
+####### Project options
 include_directories(include)
 include_directories(include/external)
-add_compile_options(--std=c++14 -O3 -g)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(src_files
   src/main.cpp
@@ -13,6 +14,9 @@ set(src_files
   src/Compressor.cpp
   src/KDTree.cpp)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+####### Add Boost
 set(used_boost_libs
   program_options)
 
@@ -26,3 +30,12 @@ if(Boost_FOUND)
     add_executable(quant ${src_files})
     target_link_libraries(quant ${Boost_LIBRARIES})
 endif()
+
+####### Add GTest
+add_subdirectory(gtest)
+enable_testing()
+include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCEDIR})
+
+add_executable(runtest src/test.cpp)
+target_link_libraries(runtest gtest gtest_main)
+add_test(runtest runtest)
