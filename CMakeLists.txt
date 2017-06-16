@@ -9,12 +9,13 @@ include_directories(include)
 include_directories(include/external)
 
 set(src_files
-  src/main.cpp
   src/RGBImage.cpp
   src/Compressor.cpp
-  src/KDTree.cpp)
+  src/KDTree.cpp
+  src/ProgramOptions.cpp)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 ####### Add Boost
 set(used_boost_libs
@@ -26,9 +27,12 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost COMPONENTS ${used_boost_libs} REQUIRED)
 
 if(Boost_FOUND)
+    add_library(quantsrc STATIC ${src_files})
+    target_link_libraries(quantsrc ${Boost_LIBRARIES})
+
     include_directories(${Boost_INCLUDE_DIRS})
-    add_executable(quant ${src_files})
-    target_link_libraries(quant ${Boost_LIBRARIES})
+    add_executable(quant src/main.cpp)
+    target_link_libraries(quant quantsrc)
 endif()
 
 ####### Add GTest
@@ -37,5 +41,5 @@ enable_testing()
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCEDIR})
 
 add_executable(runtest src/test.cpp)
-target_link_libraries(runtest gtest gtest_main)
+target_link_libraries(runtest gtest gtest_main quantsrc)
 add_test(runtest runtest)

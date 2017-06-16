@@ -1,5 +1,4 @@
 #include "Compressor.hpp"
-#include "ProgramParameters.hpp"
 #include "Debug.hpp"
 #include "KDTree.hpp"
 #include "VectorOperations.hpp"
@@ -246,12 +245,8 @@ std::chrono::duration<double> measureExecutionTime(const std::function<void()> &
   return executionTime;
 }
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image, int blockWidth, int blockHeight, int eps, int N)
 {
-  ProgramParameters *par = getParams();
-  size_t blockWidth = par->width;
-  size_t blockHeight = par->height;
-
   std::vector<vec> codeVectors;
   std::vector<size_t> assignedCodeVector;
   vecType distortion;
@@ -259,7 +254,7 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image)
   auto compressionTime = measureExecutionTime([&](){
       auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
       std::tie(codeVectors, assignedCodeVector, distortion) =
-          quantize(trainingSet, par->n, par->eps);
+          quantize(trainingSet, N, eps);
     });
 
   CompressedImage resImg;

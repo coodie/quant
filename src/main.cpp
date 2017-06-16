@@ -7,19 +7,11 @@
 #include <iostream>
 #include "boost/program_options.hpp"
 
-std::unique_ptr<ProgramParameters> par;
-
-ProgramParameters* getParams()
-{
-  return par.get();
-}
-
 int main(int argc, char **argv)
 {
   namespace po = boost::program_options;
   po::options_description desc("Options");
-  par = std::make_unique<ProgramParameters>();
-
+  auto par = getParams();
   desc.add_options()
     ("help", "Print help messages")
     (",n", po::value<int>(&par->n)->default_value(8),
@@ -56,7 +48,7 @@ int main(int argc, char **argv)
   CompressedImage cImg;
   CompressionRaport raport;
 
-  std::tie(cImg, raport) = compress(img);
+  std::tie(cImg, raport) = compress(img, par->width, par->height, par->eps, par->n);
   if(par->raport)
     std::cout << raport;
   RGBImage decompressed = decompress(cImg);

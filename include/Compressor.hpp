@@ -19,7 +19,7 @@ public:
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
   size_t sizeInBits();
-  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&);
+  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, int blockWidth, int blockHeight, int eps, int N);
   friend RGBImage decompress(const CompressedImage&);
 
 private:
@@ -29,5 +29,5 @@ private:
   size_t blockWidth, blockHeight;
 };
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&);
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, int blockWidth, int blockHeight, int eps, int N);
 RGBImage decompress(const CompressedImage&);
