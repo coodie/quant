@@ -9,78 +9,6 @@
 
 namespace
 {
-  vecType scale(char x)
-  {
-    return (((vecType)x));
-  }
-
-  char unscale(vecType x)
-  {
-    return char((std::round(x)));
-  }
-
-  std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
-  {
-    const std::vector<RGB> &img = image.img;
-
-    int xSize = image.xSize;
-    int ySize = image.ySize;
-
-    size_t wBlocks = (xSize+w-1)/w;
-    size_t hBlocks = (ySize+h-1)/h;
-
-    std::vector<vec> res(wBlocks*hBlocks);
-
-    for(size_t i = 0; i < wBlocks; i++)
-      for(size_t j = 0; j < hBlocks; j++)
-      {
-        vec tmp(3*w*h);
-        for(size_t x = i*w; x < i*w+w; x++)
-          for(size_t y = j*h; y < j*h+h; y++)
-          {
-            size_t imgIndex = x*ySize + y;
-            size_t vecIndex = (x-i*w)*h+(y-j*h);
-            for(auto shift : RGBRange)
-              if(imgIndex < img.size())
-                tmp.at(vecIndex+shift) = scale(img.at(imgIndex).at(shift));
-              else
-                tmp.at(vecIndex+shift) = 0;
-          }
-        res.at(i*hBlocks+j) = std::move(tmp);
-      }
-    return res;
-  }
-
-  RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
-  {
-    size_t wBlocks = (xSize+w-1)/w;
-    size_t hBlocks = (ySize+h-1)/h;
-
-    std::vector<RGB> imgData(xSize*ySize);
-
-    for(size_t i = 0; i < wBlocks; i++)
-      for(size_t j = 0; j < hBlocks; j++)
-        {
-          const vec &tmp = blocks.at(i*hBlocks+j);
-
-          for(size_t x = i*w; x < i*w+w; x++)
-            for(size_t y = j*h; y < j*h+h; y++)
-            {
-              size_t imgIndex = x*ySize + y;
-              size_t vecIndex = (x-i*w)*h+(y-j*h);
-              if(imgIndex < imgData.size())
-                for(auto shift : RGBRange)
-                  imgData.at(imgIndex).at(shift) = unscale(tmp.at(vecIndex+shift));
-            }
-        }
-
-    RGBImage img;
-    img.ySize = ySize;
-    img.xSize = xSize;
-    img.img = std::move(imgData);
-    return img;
-  }
-
   vecType getDistortion(const std::vector<vec> &trainingSet,
                         const std::vector<size_t> &assignedCodeVector,
                         const std::vector<vec> &codeVectors)
@@ -179,57 +107,131 @@ namespace
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
   }
 
-  const int MAX_IT = 50;
+}
 
-  std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+const int MAX_IT = 50;
+std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+{
+  size_t dim = trainingSet[0].size();
+  size_t maxCodeVectors = 1 << n;
+
+  std::vector<size_t> assignedCodeVector(trainingSet.size());
+  std::vector<vec> codeVectors(1, vec(dim));
+  codeVectors.reserve(maxCodeVectors);
+
+  // Initialize values
+  for(auto &v : trainingSet) codeVectors[0] += v;
+  codeVectors[0] /= (vecType)(trainingSet.size());
+  for(auto &a : assignedCodeVector) a = 0;
+  vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+
+  while(codeVectors.size() < maxCodeVectors)
   {
-    size_t dim = trainingSet[0].size();
-    size_t maxCodeVectors = 1 << n;
 
-    std::vector<size_t> assignedCodeVector(trainingSet.size());
-    std::vector<vec> codeVectors(1, vec(dim));
-    codeVectors.reserve(maxCodeVectors);
-
-    // Initialize values
-    for(auto &v : trainingSet) codeVectors[0] += v;
-    codeVectors[0] /= (vecType)(trainingSet.size());
-    for(auto &a : assignedCodeVector) a = 0;
-    vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-
-    while(codeVectors.size() < maxCodeVectors)
+    DEBUG_PRINT(eps);
+    // splitting phase
+    concat(codeVectors, codeVectors);
+    for(size_t i = 0; i < codeVectors.size()/2; i++)
     {
-
-      // splitting phase
-      concat(codeVectors, codeVectors);
-      for(size_t i = 0; i < codeVectors.size()/2; i++)
-      {
-        codeVectors[i] *= (vecType)(1+0.01);
-        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.01);
-      }
-
-      // iteration phase
-      for(size_t it = 0; it < MAX_IT; it++)
-      {
-        assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-        fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-
-        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-        //if((distortion-newDistortion)/distortion <= eps)
-        //{
-        //  distortion = newDistortion;
-        //  break;
-        //}
-        distortion = newDistortion;
-        DEBUG_PRINT(it);
-        DEBUG_PRINT(distortion);
-      }
+      codeVectors[i] *= (vecType)(1+eps);
+      codeVectors[i+codeVectors.size()/2] *= (vecType)(1-eps);
     }
 
-    assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-    fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-    distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-    return std::make_tuple(codeVectors, assignedCodeVector, distortion);
+    // iteration phase
+    for(size_t it = 0; it < MAX_IT; it++)
+    {
+      assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+      fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+
+      vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+      //if((distortion-newDistortion)/distortion <= eps)
+      //{
+      //  distortion = newDistortion;
+      //  break;
+      //}
+      distortion = newDistortion;
+      //DEBUG_PRINT(it);
+      //DEBUG_PRINT(distortion);
+    }
   }
+
+  assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+  fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+  distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+  return std::make_tuple(codeVectors, assignedCodeVector, distortion);
+}
+
+
+vecType scale(char x)
+{
+  return (((vecType)x));
+}
+
+char unscale(vecType x)
+{
+  return char((std::round(x)));
+}
+
+std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
+{
+  const std::vector<RGB> &img = image.img;
+
+  int xSize = image.xSize;
+  int ySize = image.ySize;
+
+  size_t wBlocks = (xSize+w-1)/w;
+  size_t hBlocks = (ySize+h-1)/h;
+
+  std::vector<vec> res(wBlocks*hBlocks);
+
+  for(size_t i = 0; i < wBlocks; i++)
+    for(size_t j = 0; j < hBlocks; j++)
+    {
+      vec tmp(3*w*h);
+      for(size_t x = i*w; x < i*w+w; x++)
+        for(size_t y = j*h; y < j*h+h; y++)
+        {
+          size_t imgIndex = x*ySize + y;
+          size_t vecIndex = ((x-i*w)*h+(y-j*h))*3;
+          for(auto shift : RGBRange)
+            if(imgIndex < img.size())
+              tmp.at(vecIndex+shift) = scale(img.at(imgIndex).at(shift));
+            else
+              tmp.at(vecIndex+shift) = 0;
+        }
+      res.at(i*hBlocks+j) = std::move(tmp);
+    }
+  return res;
+}
+
+RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
+{
+  size_t wBlocks = (xSize+w-1)/w;
+  size_t hBlocks = (ySize+h-1)/h;
+
+  std::vector<RGB> imgData(xSize*ySize);
+
+  for(size_t i = 0; i < wBlocks; i++)
+    for(size_t j = 0; j < hBlocks; j++)
+      {
+        const vec &tmp = blocks.at(i*hBlocks+j);
+
+        for(size_t x = i*w; x < i*w+w; x++)
+          for(size_t y = j*h; y < j*h+h; y++)
+          {
+            size_t imgIndex = x*ySize + y;
+            size_t vecIndex = ((x-i*w)*h+(y-j*h))*3;
+            if(imgIndex < imgData.size())
+              for(auto shift : RGBRange)
+                imgData.at(imgIndex).at(shift) = unscale(tmp.at(vecIndex+shift));
+          }
+      }
+
+  RGBImage img;
+  img.ySize = ySize;
+  img.xSize = xSize;
+  img.img = std::move(imgData);
+  return img;
 }
 
 std::chrono::duration<double> measureExecutionTime(const std::function<void()> &f)
@@ -245,7 +247,7 @@ std::chrono::duration<double> measureExecutionTime(const std::function<void()> &
   return executionTime;
 }
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image, int blockWidth, int blockHeight, int eps, int N)
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image, int blockWidth, int blockHeight, vecType eps, int N)
 {
   std::vector<vec> codeVectors;
   std::vector<size_t> assignedCodeVector;

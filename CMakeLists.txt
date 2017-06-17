@@ -12,10 +12,9 @@ set(src_files
   src/RGBImage.cpp
   src/Compressor.cpp
   src/KDTree.cpp
-  src/ProgramOptions.cpp)
+  src/ProgramParameters.cpp)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 
 ####### Add Boost
 set(used_boost_libs

@@ -11,8 +11,8 @@ function fix_image()
     pnmtopng $out > $out_png
 }
 
-fix_image splash.ppm splash_compressed.ppm &
-fix_image earth.ppm earth_compressed.ppm &
-fix_image couple.ppm couple_compressed.ppm &
-fix_image beans.ppm beans_compressed.ppm &
-wait
+fix_image splash.ppm splash_compressed.ppm
+#fix_image earth.ppm earth_compressed.ppm &
+#fix_image couple.ppm couple_compressed.ppm &
+#fix_image beans.ppm beans_compressed.ppm &
+#wait
