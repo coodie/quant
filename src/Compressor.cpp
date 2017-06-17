@@ -7,7 +7,7 @@
 #include <fstream>
 #include <chrono>
 
-class LGBQuantizer : public AbstractQuantizer
+class LBGQuantizer : public AbstractQuantizer
 {
   private:
   vecType getDistortion(const std::vector<vec> &trainingSet,
@@ -115,6 +115,15 @@ public:
   }
 };
 
+class PNNQuantizer : public AbstractQuantizer
+{
+private:
+public:
+  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+  {
+    return std::tuple<std::vector<vec>, std::vector<size_t>, vecType>();
+  }
+};
 
 vecType scale(char x)
 {
@@ -271,11 +280,11 @@ void CompressedImage::loadFromFile(const std::string &path)
 std::unique_ptr<AbstractQuantizer> getQuantizer(Quantizers q)
 {
 switch (q) {
- case Quantizers::LGB: {
-   return std::unique_ptr<AbstractQuantizer>(new LGBQuantizer());
+ case Quantizers::LBG: {
+   return std::unique_ptr<AbstractQuantizer>(new LBGQuantizer());
    break;
  }
- case Quantizers::Equitz:
+ case Quantizers::PNN:
    throw std::runtime_error("unimplemented");
    break;
  }

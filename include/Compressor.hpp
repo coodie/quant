@@ -14,8 +14,8 @@ public:
 
 enum class Quantizers
 {
-  LGB,
-    Equitz
+  LBG,
+    PNN
     };
 
 class AbstractQuantizer

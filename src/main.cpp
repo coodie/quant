@@ -33,7 +33,7 @@ int main(int argc, char **argv)
      "Save to")
     (",r", po::value<bool>(&par->raport)->default_value(true),
      "Print raport to std::out")
-    (",quantizer", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LGB),
+    (",quantizer", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LBG),
     "Pick quantizer");
 
   po::variables_map vm;
