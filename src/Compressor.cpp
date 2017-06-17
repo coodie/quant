@@ -7,9 +7,33 @@
 #include <fstream>
 #include <chrono>
 
+
+Cie1931 rgbToCie1931(RGB c)
+{
+  return
+    {
+      (c[0]*0.490+c[1]*0.310+c[2]*0.200)/0.17697,
+      (c[0]*0.17697+c[1]*0.81240+c[2]*0.01063)/0.17697,
+      (c[0]*0+c[1]*0.01+c[2]*0.99)/0.17697
+    };
+}
+
+RGB Cie1931ToRGB(Cie1931 c)
+{
+  Cie1931 tmp =
+    {
+      (c[0]*0.418+c[1]*(-0.15866)+c[2]*(-0.082835)),
+      (c[0]*(-0.091169)+c[1]*0.25243+c[2]*0.015708),
+      (c[0]*0.0009209+c[1]*(-0.0025498)+c[2]*0.17860)
+    };
+  return {(char)std::round(tmp[0]), (char)std::round(tmp[1]), (char)std::round(tmp[2])};
+}
+
+
 class LBGQuantizer : public AbstractQuantizer
 {
   private:
+
   vecType getDistortion(const std::vector<vec> &trainingSet,
                         const std::vector<size_t> &assignedCodeVector,
                         const std::vector<vec> &codeVectors)
@@ -24,6 +48,22 @@ class LBGQuantizer : public AbstractQuantizer
       const auto &c = codeVectors[assignedCodeVector[i]];
       res += inner_product(x-c);
     }
+    return res/((vecType)(M*dim));
+  }
+
+  vecType getDistortionInArea(const std::vector<vec> &trainingSet,
+                              const std::vector<size_t> &area,
+                              const vec &codeVector)
+  {
+    size_t dim = trainingSet[0].size();
+    size_t M = trainingSet.size();
+
+    vecType res = 0;
+    for(size_t i = 0; i < area.size(); i++)
+      {
+        const auto &x = trainingSet[area[i]];
+        res += inner_product(x-codeVector);
+      }
     return res/((vecType)(M*dim));
   }
 
@@ -49,6 +89,23 @@ class LBGQuantizer : public AbstractQuantizer
       codeVectorArea[cur].push_back(i);
     }
 
+
+    auto cmpByDistortion = [&](const size_t &a, const size_t &b)
+    {
+      if(getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]) <
+         getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]))
+        return true;
+      return false;
+    };
+
+    size_t mx = 0;
+
+    for(size_t i = 0; i < codeVectors.size(); i++)
+    {
+      if(cmpByDistortion(mx, i))
+        mx = i;
+    }
+
     for(auto &a : codeVectors) for(auto &b : a) b = 0.0;
 
     for(size_t i = 0; i < codeVectors.size(); i++)
@@ -56,7 +113,9 @@ class LBGQuantizer : public AbstractQuantizer
       for(auto &x : codeVectorArea[i])
         codeVectors[i] += trainingSet.at(x);
       if(codeVectorArea[i].size())
-        codeVectors[i] /= codeVectorArea[i].size();
+        codeVectors[i] /= (vecType)codeVectorArea[i].size();
+      else
+        codeVectors[i] = trainingSet[codeVectorArea[mx][std::rand() % codeVectorArea[mx].size()]];
     }
 
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
@@ -65,7 +124,7 @@ class LBGQuantizer : public AbstractQuantizer
 public:
   virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
-    const int MAX_IT = 50;
+    const int MAX_IT = 100;
     size_t dim = trainingSet[0].size();
     size_t maxCodeVectors = 1 << n;
 
@@ -156,9 +215,13 @@ std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h
         {
           size_t imgIndex = x*ySize + y;
           size_t vecIndex = ((x-i*w)*h+(y-j*h))*3;
+
           for(auto shift : RGBRange)
             if(imgIndex < img.size())
-              tmp.at(vecIndex+shift) = scale(img.at(imgIndex).at(shift));
+            {
+              Cie1931 scaled = rgbToCie1931(img.at(imgIndex));
+              tmp.at(vecIndex+shift) = scaled.at(shift);
+            }
             else
               tmp.at(vecIndex+shift) = 0;
         }
@@ -184,9 +247,13 @@ RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySiz
           {
             size_t imgIndex = x*ySize + y;
             size_t vecIndex = ((x-i*w)*h+(y-j*h))*3;
+
             if(imgIndex < imgData.size())
+            {
+              RGB unscaled = Cie1931ToRGB({tmp.at(vecIndex), tmp.at(vecIndex+1), tmp.at(vecIndex+2)});
               for(auto shift : RGBRange)
-                imgData.at(imgIndex).at(shift) = unscale(tmp.at(vecIndex+shift));
+                imgData.at(imgIndex).at(shift) = unscaled.at(shift);
+            }
           }
       }
 
@@ -261,8 +328,8 @@ size_t CompressedImage::sizeInBits()
   // At this moment approximate size
   size_t codeVectorBits = smallestPow2(codeVectors.size()-1);
   size_t dimension = blockWidth*blockHeight;
-  size_t bits = codeVectorBits*assignedCodeVector.size() + // Store image data
-    dimension*codeVectors.size()*sizeof(char); // Store codevectors
+  size_t bits = codeVectorBits*assignedCodeVector.size() +
+  dimension*codeVectors.size()*8; // Store codevectors
 
   return ((bits+7)/8)*8; //align
 }
