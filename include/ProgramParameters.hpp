@@ -10,6 +10,7 @@ struct ProgramParameters
   float eps;
   bool d;
   bool raport;
+  int quantizer;
   std::string file;
   std::string saveto;
 };

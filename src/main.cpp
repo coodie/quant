@@ -32,7 +32,9 @@ int main(int argc, char **argv)
     ("saveto,o", po::value<std::string>(&par->saveto)->required(),
      "Save to")
     (",r", po::value<bool>(&par->raport)->default_value(true),
-     "Print raport to std::out");
+     "Print raport to std::out")
+    (",quantizer", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LGB),
+    "Pick quantizer");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -48,7 +50,7 @@ int main(int argc, char **argv)
   CompressedImage cImg;
   CompressionRaport raport;
 
-  std::tie(cImg, raport) = compress(img, par->width, par->height, par->eps, par->n);
+  std::tie(cImg, raport) = compress(img, getQuantizer((Quantizers)par->quantizer), par->width, par->height, par->eps, par->n);
   if(par->raport)
     std::cout << raport;
   RGBImage decompressed = decompress(cImg);
