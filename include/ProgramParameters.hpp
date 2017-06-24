@@ -11,6 +11,7 @@ struct ProgramParameters
   bool d;
   bool raport;
   int quantizer;
+  int colorspace;
   std::string file;
   std::string saveto;
 };

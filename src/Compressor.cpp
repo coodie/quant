@@ -7,27 +7,44 @@
 #include <fstream>
 #include <chrono>
 
-
-Cie1931 rgbToCie1931(RGB c)
+RGBDouble ColorSpace::RGBtoColorSpace(const RGB &c)
 {
-  return
-    {
-      (c[0]*0.490+c[1]*0.310+c[2]*0.200)/0.17697,
-      (c[0]*0.17697+c[1]*0.81240+c[2]*0.01063)/0.17697,
-      (c[0]*0+c[1]*0.01+c[2]*0.99)/0.17697
-    };
+  return {(vecType)c.at(0), (vecType)c.at(1), (vecType)c.at(2)};
 }
 
-RGB Cie1931ToRGB(Cie1931 c)
+RGB ColorSpace::colorSpaceToRGB(const RGBDouble &c)
 {
-  Cie1931 tmp =
-    {
-      (c[0]*0.418+c[1]*(-0.15866)+c[2]*(-0.082835)),
-      (c[0]*(-0.091169)+c[1]*0.25243+c[2]*0.015708),
-      (c[0]*0.0009209+c[1]*(-0.0025498)+c[2]*0.17860)
-    };
-  return {(char)std::round(tmp[0]), (char)std::round(tmp[1]), (char)std::round(tmp[2])};
+  return {(char)std::round(c.at(0)), (char)std::round(c.at(2)), (char)std::round(c.at(2))};
 }
+
+class Cie1931 : public ColorSpace
+{
+public:
+  Cie1931() = default;
+  RGBDouble RGBtoColorSpace(RGB c)
+  {
+    return
+      {
+        (c[0]*0.490+c[1]*0.310+c[2]*0.200)/0.17697,
+          (c[0]*0.17697+c[1]*0.81240+c[2]*0.01063)/0.17697,
+          (c[0]*0+c[1]*0.01+c[2]*0.99)/0.17697
+          };
+  }
+
+  RGB colorSpaceToRGB(RGBDouble c)
+  {
+    RGBDouble tmp =
+      {
+        (c[0]*0.418+c[1]*(-0.15866)+c[2]*(-0.082835)),
+        (c[0]*(-0.091169)+c[1]*0.25243+c[2]*0.015708),
+        (c[0]*0.0009209+c[1]*(-0.0025498)+c[2]*0.17860)
+      };
+    return {(char)std::round(tmp[0]), (char)std::round(tmp[1]), (char)std::round(tmp[2])};
+  }
+};
+
+
+
 
 vecType getDistortion(const std::vector<vec> &trainingSet,
                       const std::vector<size_t> &assignedCodeVector,
@@ -260,7 +277,7 @@ char unscale(vecType x)
   return char((std::round(x)));
 }
 
-std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h)
+std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr &cs)
 {
   const std::vector<RGB> &img = image.img;
 
@@ -285,7 +302,7 @@ std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h
           for(auto shift : RGBRange)
             if(imgIndex < img.size())
             {
-              Cie1931 scaled = rgbToCie1931(img.at(imgIndex));
+              RGBDouble scaled = cs->RGBtoColorSpace(img.at(imgIndex));
               tmp.at(vecIndex+shift) = scaled.at(shift);
             }
             else
@@ -296,7 +313,7 @@ std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h
   return res;
 }
 
-RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h)
+RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr &cs)
 {
   size_t wBlocks = (xSize+w-1)/w;
   size_t hBlocks = (ySize+h-1)/h;
@@ -316,7 +333,7 @@ RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySiz
 
             if(imgIndex < imgData.size())
             {
-              RGB unscaled = Cie1931ToRGB({tmp.at(vecIndex), tmp.at(vecIndex+1), tmp.at(vecIndex+2)});
+              RGB unscaled = cs->colorSpaceToRGB({tmp.at(vecIndex), tmp.at(vecIndex+1), tmp.at(vecIndex+2)});
               for(auto shift : RGBRange)
                 imgData.at(imgIndex).at(shift) = unscaled.at(shift);
             }
@@ -344,7 +361,8 @@ std::chrono::duration<double> measureExecutionTime(const std::function<void()> &
 }
 
 std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
-                                                       const std::unique_ptr<AbstractQuantizer> &quantizer,
+                                                       const QuantizerPtr &quantizer,
+                                                       const ColorSpacePtr &colorSpace,
                                                        int blockWidth,
                                                        int blockHeight,
                                                        vecType eps,
@@ -355,7 +373,7 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
   vecType distortion;
 
   auto compressionTime = measureExecutionTime([&](){
-      auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight);
+      auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight, colorSpace);
       std::tie(codeVectors, assignedCodeVector, distortion) =
           quantizer->quantize(trainingSet, N, eps);
     });
@@ -373,13 +391,13 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
   return std::make_pair(resImg, raport);
 }
 
-RGBImage decompress(const CompressedImage& cImg)
+RGBImage decompress(const CompressedImage& cImg, const ColorSpacePtr& cs)
 {
   std::vector<vec> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
 
-  RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
+  RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight, cs);
   return res;
 }
 
@@ -411,7 +429,20 @@ void CompressedImage::loadFromFile(const std::string &path)
   throw std::runtime_error("not implemented");
 }
 
-std::unique_ptr<AbstractQuantizer> getQuantizer(Quantizers q)
+ColorSpacePtr getColorSpace(ColorSpaces cs)
+{
+  switch(cs)
+  {
+  case ColorSpaces::NORMAL:
+    return ColorSpacePtr(new ColorSpace());
+    break;
+  case ColorSpaces::CIE1931:
+    return ColorSpacePtr(new Cie1931());
+    break;
+  }
+}
+
+QuantizerPtr getQuantizer(Quantizers q)
 {
 switch (q) {
  case Quantizers::LBG: {

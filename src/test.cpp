@@ -14,13 +14,13 @@ TEST(compressor_test, something)
     };
   testImg.xSize = 4;
   testImg.ySize = 4;
-
+  ColorSpacePtr cs = getColorSpace(ColorSpaces::NORMAL);
   {
     int w = 1;
     int h = 1;
 
-    auto blocks = getBlocksAsVectorsFromImage(testImg, w, h);
-    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h);
+    auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
+    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
 
     EXPECT_EQ(expected.img, testImg.img);
   }
@@ -29,8 +29,8 @@ TEST(compressor_test, something)
     int w = 2;
     int h = 2;
 
-    auto blocks = getBlocksAsVectorsFromImage(testImg, w, h);
-    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h);
+    auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
+    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
 
     EXPECT_EQ(expected.img, testImg.img);
   }
@@ -39,8 +39,8 @@ TEST(compressor_test, something)
      int w = 1;
      int h = 3;
 
-     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h);
-     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h);
+     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
+     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
 
      EXPECT_EQ(expected.img, testImg.img);
    }
@@ -49,8 +49,8 @@ TEST(compressor_test, something)
      int w = 2;
      int h = 4;
 
-     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h);
-     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h);
+     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
+     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
 
      EXPECT_EQ(expected.img, testImg.img);
    }

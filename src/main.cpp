@@ -33,8 +33,10 @@ int main(int argc, char **argv)
      "Save to")
     (",r", po::value<bool>(&par->raport)->default_value(true),
      "Print raport to std::out")
-    (",quantizer", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LBG),
-    "Pick quantizer");
+    ("quantizer,q", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LBG),
+     "Pick quantizer")
+    ("c,colorspace", po::value<int>(&par->colorspace)->default_value((int)ColorSpaces::NORMAL),
+     "Pick ColorSpace");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -50,9 +52,12 @@ int main(int argc, char **argv)
   CompressedImage cImg;
   CompressionRaport raport;
 
-  std::tie(cImg, raport) = compress(img, getQuantizer((Quantizers)par->quantizer), par->width, par->height, par->eps, par->n);
+  QuantizerPtr quantizer = getQuantizer((Quantizers)par->quantizer);
+  ColorSpacePtr colorspace = getColorSpace((ColorSpaces)par->colorspace);
+
+  std::tie(cImg, raport) = compress(img, quantizer, colorspace, par->width, par->height, par->eps, par->n);
   if(par->raport)
     std::cout << raport;
-  RGBImage decompressed = decompress(cImg);
+  RGBImage decompressed = decompress(cImg, colorspace);
   decompressed.saveToFile(par->saveto);
 }

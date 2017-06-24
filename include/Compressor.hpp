@@ -12,10 +12,27 @@ public:
   friend std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport);
 };
 
+enum class ColorSpaces
+{
+  NORMAL,
+  CIE1931
+};
+
+class ColorSpace
+{
+public:
+  virtual RGBDouble RGBtoColorSpace(const RGB&);
+  virtual RGB colorSpaceToRGB(const RGBDouble&);
+  virtual ~ColorSpace() = default;
+};
+
+typedef std::unique_ptr<ColorSpace> ColorSpacePtr;
+
+ColorSpacePtr getColorSpace(ColorSpaces);
+
 enum class Quantizers
 {
-  LBG,
-  MEDIAN_CUT
+  LBG, MEDIAN_CUT, LBG_MEDIAN_CUT
 };
 
 class AbstractQuantizer
@@ -25,6 +42,10 @@ public:
   virtual ~AbstractQuantizer() = default;
 };
 
+typedef std::unique_ptr<AbstractQuantizer> QuantizerPtr;
+
+QuantizerPtr getQuantizer(Quantizers);
+
 class CompressedImage
 {
 public:
@@ -32,8 +53,8 @@ public:
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
   size_t sizeInBits();
-  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const std::unique_ptr<AbstractQuantizer> &quantizerint, int blockWidth, int blockHeight, vecType eps, int N);
-  friend RGBImage decompress(const CompressedImage&);
+  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, vecType eps, int N);
+  friend RGBImage decompress(const CompressedImage&, const ColorSpacePtr&);
 
 private:
   std::vector<vec> codeVectors;
@@ -42,11 +63,10 @@ private:
   size_t blockWidth, blockHeight;
 };
 
-std::unique_ptr<AbstractQuantizer> getQuantizer(Quantizers);
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const std::unique_ptr<AbstractQuantizer> &quantizer, int blockWidth, int blockHeight, vecType eps, int N);
-RGBImage decompress(const CompressedImage&);
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, vecType eps, int N);
+RGBImage decompress(const CompressedImage&, const ColorSpacePtr&);
 
-std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h);
-RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h);
+std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr&);
+RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr&);
 std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps);
