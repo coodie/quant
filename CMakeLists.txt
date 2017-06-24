@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2.2)
 project (quant)
 
 ####### Compiler options
-add_compile_options(--std=c++14 -O3 -g -Wall)
+add_compile_options(--std=c++14 -g -Wall)
 
 ####### Project options
 include_directories(include)

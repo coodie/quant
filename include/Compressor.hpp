@@ -15,8 +15,8 @@ public:
 enum class Quantizers
 {
   LBG,
-    PNN
-    };
+  MEDIAN_CUT
+};
 
 class AbstractQuantizer
 {

@@ -29,27 +29,110 @@ RGB Cie1931ToRGB(Cie1931 c)
   return {(char)std::round(tmp[0]), (char)std::round(tmp[1]), (char)std::round(tmp[2])};
 }
 
-
-class LBGQuantizer : public AbstractQuantizer
+vecType getDistortion(const std::vector<vec> &trainingSet,
+                      const std::vector<size_t> &assignedCodeVector,
+                      const std::vector<vec> &codeVectors)
 {
-  private:
+  size_t dim = trainingSet[0].size();
+  size_t M = trainingSet.size();
 
-  vecType getDistortion(const std::vector<vec> &trainingSet,
-                        const std::vector<size_t> &assignedCodeVector,
-                        const std::vector<vec> &codeVectors)
-  {
-    size_t dim = trainingSet[0].size();
-    size_t M = trainingSet.size();
-
-    vecType res = 0;
-    for(size_t i = 0; i < trainingSet.size(); i++)
+  vecType res = 0;
+  for(size_t i = 0; i < trainingSet.size(); i++)
     {
       const auto &x = trainingSet[i];
       const auto &c = codeVectors[assignedCodeVector[i]];
       res += inner_product(x-c);
     }
-    return res/((vecType)(M*dim));
+  return res/((vecType)(M*dim));
+}
+
+void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
+{
+  size_t dim = trainingSet.front().size();
+  KDTree kdtree(dim, codeVectors);
+
+  for(size_t i = 0; i < trainingSet.size(); i++)
+    {
+      size_t found = kdtree.nearestNeighbour(trainingSet[i]);
+      assignedCodeVector[i] = found;
+    }
+}
+
+class MedianCut : public AbstractQuantizer
+{
+private:
+  size_t findWidestDimension(const std::vector<vec> &vectors)
+  {
+    std::vector<int> dim(vectors[0].size());
+    std::iota(begin(dim), end(dim), 0);
+
+    std::vector<vecType> ranges;
+
+    std::transform(begin(dim), end(dim), std::back_inserter(ranges),
+                   [&](auto d)
+                   {
+                     auto minmax = std::minmax_element(begin(vectors), end(vectors),
+                                               [=](const auto &a, const auto &b)
+                                               {
+                                                 return a[d] < b[d];
+                                               });
+                     return minmax.second-minmax.first;
+                   });
+    auto it = std::max_element(begin(ranges), end(ranges));
+    return std::distance(begin(ranges), it);
   }
+
+  std::pair<std::vector<vec>, std::vector<vec>> split(std::vector<vec> vectors, size_t dim)
+  {
+    std::sort(begin(vectors), end(vectors),
+              [=](const auto &a, const auto &b)
+              {
+                return a[dim] < b[dim];
+              });
+    auto half = begin(vectors) + vectors.size()/2;
+    return std::make_pair(std::vector<vec>(begin(vectors), half),
+                          std::vector<vec>(half, end(vectors)));
+  }
+
+  std::vector<vec> run(const std::vector<vec> &vectors, size_t depth, size_t max_depth)
+  {
+    if(depth >= max_depth)
+    {
+      auto avg = std::accumulate(begin(vectors), end(vectors), vec(vectors[0].size()),
+                                 [](const auto &a, const auto &b)
+                                 {
+                                   return a+b;
+                                 });
+
+      avg /= (vecType)vectors[0].size();
+      return {avg};
+    }
+
+    size_t dim = findWidestDimension(vectors);
+    auto tmp = split(vectors, dim);
+    auto res1 = run(tmp.first, depth+1, max_depth);
+    auto res2 = run(tmp.second, depth+1, max_depth);
+    concat(res1, res2);
+    return res1;
+  }
+
+public:
+  MedianCut() = default;
+
+  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType)
+  {
+    auto codeVectors = run(trainingSet, 0, n);
+    std::vector<size_t> assignedCodeVector(trainingSet.size());
+    assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+    auto distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+    return std::make_tuple(codeVectors, assignedCodeVector, distortion);
+  }
+
+};
+
+class LBGQuantizer : public AbstractQuantizer
+{
+  private:
 
   vecType getDistortionInArea(const std::vector<vec> &trainingSet,
                               const std::vector<size_t> &area,
@@ -65,18 +148,6 @@ class LBGQuantizer : public AbstractQuantizer
         res += inner_product(x-codeVector);
       }
     return res/((vecType)(M*dim));
-  }
-
-  void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
-  {
-    size_t dim = trainingSet.front().size();
-    KDTree kdtree(dim, codeVectors);
-
-    for(size_t i = 0; i < trainingSet.size(); i++)
-    {
-      size_t found = kdtree.nearestNeighbour(trainingSet[i]);
-      assignedCodeVector[i] = found;
-    }
   }
 
   void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
@@ -171,16 +242,6 @@ public:
     fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
     distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
     return std::make_tuple(codeVectors, assignedCodeVector, distortion);
-  }
-};
-
-class PNNQuantizer : public AbstractQuantizer
-{
-private:
-public:
-  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
-  {
-    return std::tuple<std::vector<vec>, std::vector<size_t>, vecType>();
   }
 };
 
@@ -351,8 +412,8 @@ switch (q) {
    return std::unique_ptr<AbstractQuantizer>(new LBGQuantizer());
    break;
  }
- case Quantizers::PNN:
-   throw std::runtime_error("unimplemented");
+ case Quantizers::MEDIAN_CUT:
+   return std::unique_ptr<AbstractQuantizer>(new MedianCut());
    break;
  }
  return nullptr;
