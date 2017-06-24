@@ -41,9 +41,9 @@ vecType getDistortion(const std::vector<vec> &trainingSet,
     {
       const auto &x = trainingSet[i];
       const auto &c = codeVectors[assignedCodeVector[i]];
-      res += inner_product(x-c);
+      res += norm(x-c)/((vecType)(M*dim));
     }
-  return res/((vecType)(M*dim));
+  return res;
 }
 
 void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
@@ -76,7 +76,10 @@ private:
                                                {
                                                  return a[d] < b[d];
                                                });
-                     return minmax.second-minmax.first;
+                     auto &fst = *minmax.first;
+                     auto &snd = *minmax.second;
+                     auto res = snd[d]-fst[d];
+                     return res;
                    });
     auto it = std::max_element(begin(ranges), end(ranges));
     return std::distance(begin(ranges), it);
@@ -96,7 +99,7 @@ private:
 
   std::vector<vec> run(const std::vector<vec> &vectors, size_t depth, size_t max_depth)
   {
-    if(depth >= max_depth)
+    if(depth >= max_depth || vectors.size() <= 1)
     {
       auto avg = std::accumulate(begin(vectors), end(vectors), vec(vectors[0].size()),
                                  [](const auto &a, const auto &b)
@@ -145,7 +148,8 @@ class LBGQuantizer : public AbstractQuantizer
     for(size_t i = 0; i < area.size(); i++)
       {
         const auto &x = trainingSet[area[i]];
-        res += inner_product(x-codeVector);
+        auto tmp = norm(x-codeVector);
+        res += tmp;
       }
     return res/((vecType)(M*dim));
   }
@@ -163,8 +167,9 @@ class LBGQuantizer : public AbstractQuantizer
 
     auto cmpByDistortion = [&](const size_t &a, const size_t &b)
     {
-      if(getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]) <
-         getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]))
+      vecType distA = getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
+      vecType distB = getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
+      if( distA < distB)
         return true;
       return false;
     };
@@ -373,6 +378,7 @@ RGBImage decompress(const CompressedImage& cImg)
   std::vector<vec> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
+
   RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
   return res;
 }
@@ -381,16 +387,16 @@ size_t smallestPow2(size_t n)
 {
   int p = 0;
   while(n/=2) p++;
-  return 1 << p;
+  return p;
 }
 
 size_t CompressedImage::sizeInBits()
 {
   // At this moment approximate size
-  size_t codeVectorBits = smallestPow2(codeVectors.size()-1);
+  size_t codeVectorBits = smallestPow2(codeVectors.size());
   size_t dimension = blockWidth*blockHeight;
   size_t bits = codeVectorBits*assignedCodeVector.size() +
-  dimension*codeVectors.size()*8; // Store codevectors
+    dimension*codeVectors.size()*8*3; // Store codevectors
 
   return ((bits+7)/8)*8; //align
 }

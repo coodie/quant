@@ -107,8 +107,9 @@ std::vector<T> concat(std::vector<T> &lhs, const std::vector<T> &rhs)
   return lhs;
 }
 
-
-static inline vecType inner_product(const vec &v)
+static inline vecType norm(const vec &v)
 {
-  return std::inner_product(v.begin(), v.end(), v.begin(), 0);
+  vecType res = 0.0;
+  for(auto x : v) res += x*x;
+  return res;
 }
