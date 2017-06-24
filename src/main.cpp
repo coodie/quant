@@ -17,13 +17,13 @@ int main(int argc, char **argv)
     (",n", po::value<int>(&par->n)->default_value(8),
      "2^n is number of codevectors")
 
-    (",e", po::value<float>(&par->eps)->default_value(0.01),
+    (",e", po::value<float>(&par->eps)->default_value(0.0001),
      "eps parameter for quantization algorithm")
 
-    (",w", po::value<int>(&par->width)->default_value(3),
+    (",w", po::value<int>(&par->width)->default_value(2),
      "Width of block")
 
-    (",h", po::value<int>(&par->height)->default_value(3),
+    (",h", po::value<int>(&par->height)->default_value(2),
      "Height of block")
 
     ("file", po::value<std::string>(&par->file)->required(),

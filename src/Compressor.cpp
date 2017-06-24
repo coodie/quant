@@ -14,14 +14,14 @@ RGBDouble ColorSpace::RGBtoColorSpace(const RGB &c)
 
 RGB ColorSpace::colorSpaceToRGB(const RGBDouble &c)
 {
-  return {(char)std::round(c.at(0)), (char)std::round(c.at(2)), (char)std::round(c.at(2))};
+  return {(char)std::round(c.at(0)), (char)std::round(c.at(1)), (char)std::round(c.at(2))};
 }
 
 class Cie1931 : public ColorSpace
 {
 public:
   Cie1931() = default;
-  RGBDouble RGBtoColorSpace(RGB c)
+  RGBDouble RGBtoColorSpace(const RGB &c) override
   {
     return
       {
@@ -31,7 +31,7 @@ public:
           };
   }
 
-  RGB colorSpaceToRGB(RGBDouble c)
+  RGB colorSpaceToRGB(const RGBDouble &c) override
   {
     RGBDouble tmp =
       {
@@ -440,19 +440,22 @@ ColorSpacePtr getColorSpace(ColorSpaces cs)
     return ColorSpacePtr(new Cie1931());
     break;
   }
+  return nullptr;
 }
 
 QuantizerPtr getQuantizer(Quantizers q)
 {
 switch (q) {
- case Quantizers::LBG: {
+ case Quantizers::LBG:
    return std::unique_ptr<AbstractQuantizer>(new LBGQuantizer());
    break;
- }
  case Quantizers::MEDIAN_CUT:
    return std::unique_ptr<AbstractQuantizer>(new MedianCut());
    break;
- }
+ case Quantizers::LBG_MEDIAN_CUT:
+   return nullptr;
+   break;
+}
  return nullptr;
 }
 
