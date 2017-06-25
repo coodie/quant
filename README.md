@@ -20,6 +20,24 @@ Here is another nice link explaining the concept [http://www.gamasutra.com/view/
 
 All of the above images have compression ratio between 15% and 20% compared to 24-bit per pixel image, and 1:2,5 to 1:5 ratio compared to PNG. Above images are being run with 2x2 block and 1024 codevectors, since experimental results showed that these give reasonable compression ratio, time and image quality.
 
+## Algorithm details
+
+In order to get yourself familiarized with this algorithm description I recommend reading articles: [http://www.data-compression.com/vq.shtml](http://www.data-compression.com/vq.shtml), [http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php](http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php).
+
+Algorithm splits image into blocks of given size (default is 2x2) and then converts the blocks to vectors. Every pixel is considered to be 3x1 vector, and blocks are based on pixels, so 2x2 block (4 pixels) is transformed to 12 dimensional vector. Pixel values range from [0, 255], and this is scaled to [0, 1] range (this gives slightly better results), so in the end we receive 12-dimensional vector. 
+
+Splitting method is used to find codevector. I start with one codevector being average of all vectors and in each iteration I run LBG algorithm to improve the codevector base, after LBG run number of codevectors is doubled with first half being multiplied by (1+eps) and the other by (1-eps), and then again LBG is being executed on these. We repeat splitting phase until desired number of codevectors is achieved.
+
+The problem of empty codevector region is solved by assigning random vector from area of the biggest distortion.
+
+## Possible improvements
+
+There are numerous possible improvements I haven't been able to solve reasonably due to lack of time, experiments etc.
+- Images contain a lot of artifacts. I saw improvements in artifacts reduction by modifying eps parameter, adding more codevectors, reducing block size, extending number of iterations in LBG algorithm, different approach to empty regions problem.
+- Algorithm is slow. This one will be very hard to achieve since LBG is normally time consuming. Parallelization is highly non-obvious. Here are references which might help in parallelizing: https://arxiv.org/abs/0910.4711, http://ieeexplore.ieee.org/document/1402243/.
+- Change color space from RGB to https://en.wikipedia.org/wiki/Lab_color_space
+- Use lossless compression methods after quantization run: Huffman encoding, LZ family, possibly others.
+- Change algorithm completely. NeuQuant seems to be far more interesting than LBG: https://scientificgems.wordpress.com/stuff/neuquant-fast-high-quality-image-quantization/ and has far better results.
 
 ## Building
 Make sure you have `cmake`, `gcc` and `boost libraries` installed:
