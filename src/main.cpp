@@ -14,28 +14,23 @@ int main(int argc, char **argv)
   auto par = getParams();
   desc.add_options()
     ("help", "Print help messages")
-    (",n", po::value<int>(&par->n)->default_value(8),
+    (",n", po::value<int>(&par->n)->default_value(10),
      "2^n is number of codevectors")
-
-    (",e", po::value<float>(&par->eps)->default_value(0.0001),
+    (",e", po::value<float>(&par->eps)->default_value(0.000001),
      "eps parameter for quantization algorithm")
-
     (",w", po::value<int>(&par->width)->default_value(2),
      "Width of block")
-
     (",h", po::value<int>(&par->height)->default_value(2),
      "Height of block")
-
     ("file", po::value<std::string>(&par->file)->required(),
      "File to compress/decompress")
-
     ("saveto,o", po::value<std::string>(&par->saveto)->required(),
      "Save to")
     (",r", po::value<bool>(&par->raport)->default_value(true),
      "Print raport to std::out")
     ("quantizer,q", po::value<int>(&par->quantizer)->default_value((int)Quantizers::LBG),
      "Pick quantizer")
-    ("c,colorspace", po::value<int>(&par->colorspace)->default_value((int)ColorSpaces::NORMAL),
+    ("c,colorspace", po::value<int>(&par->colorspace)->default_value((int)ColorSpaces::SCALED),
      "Pick ColorSpace");
 
   po::variables_map vm;

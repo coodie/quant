@@ -171,11 +171,6 @@ public:
 
 };
 
-vecType distance(const vec &a, const vec &b)
-{
-  return norm(a-b);
-}
-
 vecType getDistortionInArea(const std::vector<vec> &trainingSet,
                             const std::vector<size_t> &area,
                             const vec &codeVector)
@@ -281,8 +276,6 @@ void LBGIterate(const std::vector<vec> &trainingSet, std::vector<size_t> &assign
           break;
         }
       distortion = newDistortion;
-      DEBUG_PRINT(it);
-      DEBUG_PRINT(distortion);
     }
 }
 
@@ -459,6 +452,18 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
   resImg.blockHeight = blockHeight;
 
   float bitsPerPixel = ((float)resImg.sizeInBits())/(image.xSize*image.ySize);
+
+  {
+    RGBImage img = decompress(resImg, colorSpace);
+    distortion = 0;
+    for(size_t i = 0; i < image.img.size(); i++)
+    {
+      for(auto j : RGBRange)
+        distortion += std::pow(image.img[i][j] - img.img[i][j], 2);
+      distortion /= image.img.size()*3;
+    }
+  }
+
   CompressionRaport raport{distortion, bitsPerPixel, compressionTime};
   return std::make_pair(resImg, raport);
 }
@@ -537,8 +542,8 @@ switch (q) {
 std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport)
 {
   stream << "Compression raport: " << std::endl;
-  stream << "distortion       = " << raport.distortion << std::endl;
-  stream << "bits per pixel   = " << raport.bitsPerPixel << std::endl;
-  stream << "compression time = " << raport.compressionTime.count() << "s" << std::endl;
+  stream << "Distortion       = " << raport.distortion << std::endl;
+  stream << "Bits per pixel   = " << raport.bitsPerPixel << std::endl;
+  stream << "Compression time = " << raport.compressionTime.count() << "s" << std::endl;
   return stream;
 }
