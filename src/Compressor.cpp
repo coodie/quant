@@ -66,8 +66,6 @@ public:
 };
 
 
-
-
 vecType getDistortion(const std::vector<vec> &trainingSet,
                       const std::vector<size_t> &assignedCodeVector,
                       const std::vector<vec> &codeVectors)
@@ -77,11 +75,12 @@ vecType getDistortion(const std::vector<vec> &trainingSet,
 
   vecType res = 0;
   for(size_t i = 0; i < trainingSet.size(); i++)
-    {
-      const auto &x = trainingSet[i];
-      const auto &c = codeVectors[assignedCodeVector[i]];
-      res += norm(x-c)/((vecType)(M*dim));
-    }
+  {
+    const auto &x = trainingSet[i];
+    const auto &c = codeVectors[assignedCodeVector[i]];
+    res += norm(x-c)/((vecType)(M*dim));
+  }
+
   return res;
 }
 
@@ -172,6 +171,11 @@ public:
 
 };
 
+vecType distance(const vec &a, const vec &b)
+{
+  return norm(a-b);
+}
+
 vecType getDistortionInArea(const std::vector<vec> &trainingSet,
                             const std::vector<size_t> &area,
                             const vec &codeVector)
@@ -181,11 +185,11 @@ vecType getDistortionInArea(const std::vector<vec> &trainingSet,
 
   vecType res = 0;
   for(size_t i = 0; i < area.size(); i++)
-    {
-      const auto &x = trainingSet[area[i]];
-      auto tmp = norm(x-codeVector);
-      res += tmp;
-    }
+  {
+    const auto &x = trainingSet[area[i]];
+    auto tmp = norm(x-codeVector);
+    res += tmp;
+  }
   return res/((vecType)(M*dim));
 }
 
@@ -202,6 +206,22 @@ vec kahanSum(const std::vector<vec> &trainingSet, const std::vector<size_t> &are
     c = (t - sum) - y;
     sum = t;
   }
+  return sum;
+}
+
+vec kahanSum(const std::vector<vec> &trainingSet)
+{
+  size_t dim = trainingSet[0].size();
+  vec sum(dim);
+  vec c(dim);
+
+  for(auto x : trainingSet)
+    {
+      vec y = x - c;
+      vec t = sum + y;
+      c = (t - sum) - y;
+      sum = t;
+    }
   return sum;
 }
 
@@ -279,8 +299,10 @@ public:
     codeVectors.reserve(maxCodeVectors);
 
     // Initialize values
-    for(auto &v : trainingSet) codeVectors[0] += v;
+    codeVectors[0] = kahanSum(trainingSet);
     codeVectors[0] /= (vecType)(trainingSet.size());
+
+
     for(auto &a : assignedCodeVector) a = 0;
     vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
 
@@ -291,8 +313,8 @@ public:
       concat(codeVectors, codeVectors);
       for(size_t i = 0; i < codeVectors.size()/2; i++)
       {
-        codeVectors[i] *= (vecType)(1+0.01);
-        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.01);
+        codeVectors[i] *= (vecType)(1+0.2);
+        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.2);
       }
 
       LBGIterate(trainingSet, assignedCodeVector, codeVectors, distortion, eps);
