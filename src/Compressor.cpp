@@ -17,6 +17,28 @@ RGB ColorSpace::colorSpaceToRGB(const RGBDouble &c)
   return {(char)std::round(c.at(0)), (char)std::round(c.at(1)), (char)std::round(c.at(2))};
 }
 
+class ScaledColor : public ColorSpace
+{
+public:
+  ScaledColor() = default;
+  RGBDouble RGBtoColorSpace(const RGB &c) override
+  {
+    RGBDouble res;
+    for(size_t i = 0; i < c.size(); i++)
+      res[i] = ((vecType)c[i]+128.0)/255;
+    return res;
+  }
+
+  RGB colorSpaceToRGB(const RGBDouble &c) override
+  {
+    RGB res;
+    for(size_t i = 0; i < c.size(); i++)
+      res[i] = (char)std::round((c[i]-128.0)*255);
+    return res;
+  }
+};
+
+
 class Cie1931 : public ColorSpace
 {
 public:
@@ -150,74 +172,105 @@ public:
 
 };
 
+vecType getDistortionInArea(const std::vector<vec> &trainingSet,
+                            const std::vector<size_t> &area,
+                            const vec &codeVector)
+{
+  size_t dim = trainingSet[0].size();
+  size_t M = trainingSet.size();
+
+  vecType res = 0;
+  for(size_t i = 0; i < area.size(); i++)
+    {
+      const auto &x = trainingSet[area[i]];
+      auto tmp = norm(x-codeVector);
+      res += tmp;
+    }
+  return res/((vecType)(M*dim));
+}
+
+vec kahanSum(const std::vector<vec> &trainingSet, const std::vector<size_t> &area)
+{
+  size_t dim = trainingSet[0].size();
+  vec sum(dim);
+  vec c(dim);
+
+  for(auto x : area)
+  {
+    vec y = trainingSet[x] - c;
+    vec t = sum + y;
+    c = (t - sum) - y;
+    sum = t;
+  }
+  return sum;
+}
+
+void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
+{
+  std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
+
+  for(size_t i = 0; i < trainingSet.size(); i++)
+  {
+    int cur = assignedCodeVector[i];
+    codeVectorArea[cur].push_back(i);
+  }
+
+  auto cmpByDistortion = [&](const size_t &a, const size_t &b)
+  {
+    vecType distA = getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
+    vecType distB = getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
+    if( distA < distB)
+      return true;
+    return false;
+  };
+
+  size_t mx = 0;
+
+  for(size_t i = 0; i < codeVectors.size(); i++)
+  {
+    if(cmpByDistortion(mx, i))
+      mx = i;
+  }
+
+  for(size_t i = 0; i < codeVectors.size(); i++)
+  {
+    codeVectors[i] = kahanSum(trainingSet, codeVectorArea[i]);
+
+    if(codeVectorArea[i].size())
+      codeVectors[i] /= (vecType)codeVectorArea[i].size();
+    else
+      codeVectors[i] = trainingSet[codeVectorArea[mx][std::rand() % codeVectorArea[mx].size()]];
+  }
+
+  assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+}
+
+void LBGIterate(const std::vector<vec> &trainingSet, std::vector<size_t> &assignedCodeVector, std::vector<vec> &codeVectors, vecType distortion, vecType eps)
+{
+  const size_t MAX_IT = 100;
+  // iteration phase
+  for(size_t it = 0; it < MAX_IT; it++)
+    {
+      assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+      fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+
+      vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+      if((distortion-newDistortion)/distortion <= eps)
+        {
+          distortion = newDistortion;
+          break;
+        }
+      distortion = newDistortion;
+      DEBUG_PRINT(it);
+      DEBUG_PRINT(distortion);
+    }
+}
+
 class LBGQuantizer : public AbstractQuantizer
 {
-  private:
-
-  vecType getDistortionInArea(const std::vector<vec> &trainingSet,
-                              const std::vector<size_t> &area,
-                              const vec &codeVector)
-  {
-    size_t dim = trainingSet[0].size();
-    size_t M = trainingSet.size();
-
-    vecType res = 0;
-    for(size_t i = 0; i < area.size(); i++)
-      {
-        const auto &x = trainingSet[area[i]];
-        auto tmp = norm(x-codeVector);
-        res += tmp;
-      }
-    return res/((vecType)(M*dim));
-  }
-
-  void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
-  {
-    std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
-
-    for(size_t i = 0; i < trainingSet.size(); i++)
-    {
-      int cur = assignedCodeVector[i];
-      codeVectorArea[cur].push_back(i);
-    }
-
-
-    auto cmpByDistortion = [&](const size_t &a, const size_t &b)
-    {
-      vecType distA = getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
-      vecType distB = getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
-      if( distA < distB)
-        return true;
-      return false;
-    };
-
-    size_t mx = 0;
-
-    for(size_t i = 0; i < codeVectors.size(); i++)
-    {
-      if(cmpByDistortion(mx, i))
-        mx = i;
-    }
-
-    for(auto &a : codeVectors) for(auto &b : a) b = 0.0;
-
-    for(size_t i = 0; i < codeVectors.size(); i++)
-    {
-      for(auto &x : codeVectorArea[i])
-        codeVectors[i] += trainingSet.at(x);
-      if(codeVectorArea[i].size())
-        codeVectors[i] /= (vecType)codeVectorArea[i].size();
-      else
-        codeVectors[i] = trainingSet[codeVectorArea[mx][std::rand() % codeVectorArea[mx].size()]];
-    }
-
-    assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-  }
-
 public:
   virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
   {
-    const int MAX_IT = 100;
     size_t dim = trainingSet[0].size();
     size_t maxCodeVectors = 1 << n;
 
@@ -238,26 +291,11 @@ public:
       concat(codeVectors, codeVectors);
       for(size_t i = 0; i < codeVectors.size()/2; i++)
       {
-        codeVectors[i] *= (vecType)(1+eps);
-        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-eps);
+        codeVectors[i] *= (vecType)(1+0.01);
+        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.01);
       }
 
-      // iteration phase
-      for(size_t it = 0; it < MAX_IT; it++)
-      {
-        assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-        fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
-
-        vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
-        if((distortion-newDistortion)/distortion <= eps)
-        {
-          distortion = newDistortion;
-          break;
-        }
-        distortion = newDistortion;
-        DEBUG_PRINT(it);
-        DEBUG_PRINT(distortion);
-      }
+      LBGIterate(trainingSet, assignedCodeVector, codeVectors, distortion, eps);
     }
 
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
@@ -267,15 +305,27 @@ public:
   }
 };
 
-vecType scale(char x)
+class LBGMedianCutQuantizer : public AbstractQuantizer
 {
-  return (((vecType)x));
-}
 
-char unscale(vecType x)
-{
-  return char((std::round(x)));
-}
+public:
+  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+  {
+
+    std::vector<size_t> assignedCodeVector;
+    std::vector<vec> codeVectors;
+    vecType distortion = 0.0;
+
+    std::tie(codeVectors, assignedCodeVector, distortion) = MedianCut().quantize(trainingSet, n, eps);
+
+    LBGIterate(trainingSet, assignedCodeVector, codeVectors, distortion, eps);
+
+    assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+    fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
+    distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+    return std::make_tuple(codeVectors, assignedCodeVector, distortion);
+  }
+};
 
 std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr &cs)
 {
@@ -439,6 +489,9 @@ ColorSpacePtr getColorSpace(ColorSpaces cs)
   case ColorSpaces::CIE1931:
     return ColorSpacePtr(new Cie1931());
     break;
+  case ColorSpaces::SCALED:
+    return ColorSpacePtr(new ScaledColor());
+    break;
   }
   return nullptr;
 }
@@ -447,13 +500,13 @@ QuantizerPtr getQuantizer(Quantizers q)
 {
 switch (q) {
  case Quantizers::LBG:
-   return std::unique_ptr<AbstractQuantizer>(new LBGQuantizer());
+   return QuantizerPtr(new LBGQuantizer());
    break;
  case Quantizers::MEDIAN_CUT:
-   return std::unique_ptr<AbstractQuantizer>(new MedianCut());
+   return QuantizerPtr(new MedianCut());
    break;
  case Quantizers::LBG_MEDIAN_CUT:
-   return nullptr;
+   return QuantizerPtr(new LBGMedianCutQuantizer());
    break;
 }
  return nullptr;

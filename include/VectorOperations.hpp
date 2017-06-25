@@ -6,7 +6,7 @@
 #include "boost/container/small_vector.hpp"
 
 typedef double vecType;
-typedef boost::container::small_vector<vecType, 16> vec;
+typedef boost::container::small_vector<vecType, 27> vec;
 
 static inline vec operator+(const vec &lhs, const vec &rhs)
 {

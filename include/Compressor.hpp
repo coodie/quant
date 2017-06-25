@@ -15,6 +15,7 @@ public:
 enum class ColorSpaces
 {
   NORMAL,
+  SCALED,
   CIE1931
 };
 
@@ -62,7 +63,6 @@ private:
   size_t xSize, ySize;
   size_t blockWidth, blockHeight;
 };
-
 
 std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, vecType eps, int N);
 RGBImage decompress(const CompressedImage&, const ColorSpacePtr&);
