@@ -5,14 +5,22 @@ This is implementation of VQ algorithm as in [http://www.data-compression.com/vq
 
 Here is another nice link explaining the concept [http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php](http://www.gamasutra.com/view/feature/131499/image_compression_with_vector_.php)
 
-## Initial results
+## Examples
 
 | Before compression                                                 | After compression                                                             |
 |--------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| ![](https://github.com/coodie/quant/blob/master/images/earth.png)  | ![](https://github.com/coodie/quant/blob/master/images/earth_compressed.png)  |
-| ![](https://github.com/coodie/quant/blob/master/images/splash.png) | ![](https://github.com/coodie/quant/blob/master/images/splash_compressed.png) |
-| ![](https://github.com/coodie/quant/blob/master/images/couple.png) | ![](https://github.com/coodie/quant/blob/master/images/couple_compressed.png) |
-| ![](https://github.com/coodie/quant/blob/master/images/beans.png)  | ![](https://github.com/coodie/quant/blob/master/images/beans_compressed.png)  |
+| ![](https://github.com/coodie/quant/blob/master/images/images/earth.png)  | ![](https://github.com/coodie/quant/blob/master/images/compressed_images/earth.png)  |
+| 488K, PNG | 92K, Quant, 2,9 bits per pixel   |
+| ![](https://github.com/coodie/quant/blob/master/images/images/splash.png) | ![](https://github.com/coodie/quant/blob/master/images/compressed_images/splash.png) |
+| 388K, PNG | 92K, Quant, 2,9 bits per pixel   |
+| ![](https://github.com/coodie/quant/blob/master/images/images/couple.png) | ![](https://github.com/coodie/quant/blob/master/images/compressed_images/couple.png) |
+| 108K, PNG | 32K, Quant, 4 bits per pixel   |
+| ![](https://github.com/coodie/quant/blob/master/images/images/beans.png)  | ![](https://github.com/coodie/quant/blob/master/images/compressed_images/beans.png)  |
+| 84K, PNG | 32K, Quant, 4 bits per pixel   |
+
+All of the above images have compression ratio between 15% and 20% compared to 24-bit per pixel image, and 1:2,5 to 1:5 ratio compared to PNG.
+
+
 ## Building
 Make sure you have `cmake`, `gcc` and `boost libraries` installed:
 
