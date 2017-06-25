@@ -17,7 +17,7 @@ class RGBImage
   RGBImage() = default;
   RGBImage(const std::string &path);
   void saveToFile(const std::string &path);
-  int sizeInBytes();
+  size_t sizeInBytes() const;
   std::vector<RGB> img;
   int xSize, ySize;
 };

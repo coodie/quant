@@ -34,7 +34,7 @@ void RGBImage::saveToFile(const std::string &path)
   fs.close();
 }
 
-int RGBImage::sizeInBytes()
+size_t RGBImage::sizeInBytes() const
 {
-  return img.size();
+  return img.size()*3;
 }

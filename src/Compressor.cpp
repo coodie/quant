@@ -6,6 +6,8 @@
 #include <set>
 #include <fstream>
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 
 RGBDouble ColorSpace::RGBtoColorSpace(const RGB &c)
 {
@@ -453,18 +455,23 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
 
   float bitsPerPixel = ((float)resImg.sizeInBits())/(image.xSize*image.ySize);
 
+  // Decompress image temporarily to compute real distortion
   {
     RGBImage img = decompress(resImg, colorSpace);
     distortion = 0;
     for(size_t i = 0; i < image.img.size(); i++)
     {
       for(auto j : RGBRange)
-        distortion += std::pow(image.img[i][j] - img.img[i][j], 2);
-      distortion /= image.img.size()*3;
+        distortion += std::pow((vecType)image.img[i][j] - (vecType)img.img[i][j], 2);
     }
+    distortion /= image.img.size()*3;
   }
 
-  CompressionRaport raport{distortion, bitsPerPixel, compressionTime};
+
+  size_t uncompressedSize = image.sizeInBytes();
+  size_t compressedSize = resImg.sizeInBits()/8;
+
+  CompressionRaport raport{distortion, bitsPerPixel, uncompressedSize, compressedSize, compressionTime};
   return std::make_pair(resImg, raport);
 }
 
@@ -539,11 +546,37 @@ switch (q) {
  return nullptr;
 }
 
+std::string prettyPrintBytes(size_t bytes)
+{
+  std::stringstream res;
+  if(bytes < 1024)
+  {
+    res << bytes << "b";
+    return res.str();
+  }
+
+  if(bytes < 1024*1024)
+  {
+    size_t kb = bytes/1024;
+    res << kb << "," << bytes%1024 << "Kb";
+    return res.str();
+  }
+
+  size_t mb = bytes/(1024*1024);
+  size_t kb = bytes % (1024*1024);
+
+  res << mb << "," << kb << "Mb";
+  return res.str();
+}
+
 std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport)
 {
   stream << "Compression raport: " << std::endl;
-  stream << "Distortion       = " << raport.distortion << std::endl;
-  stream << "Bits per pixel   = " << raport.bitsPerPixel << std::endl;
-  stream << "Compression time = " << raport.compressionTime.count() << "s" << std::endl;
+  stream << "Distortion        = " << std::fixed << std::setprecision(10) << raport.distortion << std::endl;
+  stream << "Bits per pixel    = " << raport.bitsPerPixel << std::endl;
+  stream << "Uncompressed size = " << prettyPrintBytes(raport.uncompressedSize) << std::endl;
+  stream << "Compressed size   = " << prettyPrintBytes(raport.compressedSize) << std::endl;
+  stream << "Compression ratio = " << std::fixed <<  std::setprecision(3) << (double)raport.compressedSize/raport.uncompressedSize << std::endl;
+  stream << "Compression time  = " << raport.compressionTime.count() << "s" << std::endl;
   return stream;
 }

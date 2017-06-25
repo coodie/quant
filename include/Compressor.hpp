@@ -8,6 +8,8 @@ class CompressionRaport
 public:
   vecType distortion;
   float bitsPerPixel;
+  size_t uncompressedSize;
+  size_t compressedSize;
   std::chrono::duration<double> compressionTime;
   friend std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport);
 };
