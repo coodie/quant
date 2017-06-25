@@ -18,7 +18,7 @@ Here is another nice link explaining the concept [http://www.gamasutra.com/view/
 | ![](https://github.com/coodie/quant/blob/master/images/images/beans.png)  | ![](https://github.com/coodie/quant/blob/master/images/compressed_images/beans.png)  |
 | 84K, PNG | 32K, Quant, 4 bits per pixel   |
 
-All of the above images have compression ratio between 15% and 20% compared to 24-bit per pixel image, and 1:2,5 to 1:5 ratio compared to PNG.
+All of the above images have compression ratio between 15% and 20% compared to 24-bit per pixel image, and 1:2,5 to 1:5 ratio compared to PNG. Above images are being run with 2x2 block and 1024 codevectors, since experimental results showed that these give reasonable compression ratio, time and image quality.
 
 
 ## Building
