@@ -1,7 +1,7 @@
 Compression raport: 
-Distortion        = 12.1620928446
-Bits per pixel    = 2.8750000000
+Distortion        = 8.7021980286
+Bits per pixel    = 4.5000000000
 Uncompressed size = 768,0Kb
-Compressed size   = 92,0Kb
-Compression ratio = 0.120
-Compression time  = 76.647s
+Compressed size   = 144,0Kb
+Compression ratio = 0.188
+Compression time  = 175.902s

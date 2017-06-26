@@ -12,7 +12,7 @@ function compress_image()
 
     pngtopnm $in.png > $in.ppm
 
-    ../build/quant --file $in.ppm -o $out.ppm | tee $out.raport
+    ../build/quant -n 8 --file $in.ppm -o $out.ppm -h 1 -w 1 | tee $out.raport
 
     pnmtopng $out.ppm > $out.png
 
@@ -20,13 +20,12 @@ function compress_image()
     rm $out.ppm
 }
 
-for image in `ls images`
-do
-    compress_image "images/$image" "compressed_images/$image"
-done
-
+#for image in `ls images`
+#do
+#    compress_image "images/$image" "compressed_images/$image"
+#done
 
 for image in `ls kodim`
 do
-    compress_image "kodim/$image" "compressed_kodim/$image"
+    compress_image "kodim/$image" "compressed_kodim_small_block/$image"
 done
