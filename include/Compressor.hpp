@@ -1,7 +1,8 @@
 #pragma once
-#include "RGBImage.hpp"
 #include "VectorOperations.hpp"
+#include "ColorSpace.hpp"
 #include <chrono>
+#include <memory>
 
 class CompressionRaport
 {
@@ -13,25 +14,6 @@ public:
   std::chrono::duration<double> compressionTime;
   friend std::ostream& operator <<(std::ostream& stream, const CompressionRaport& raport);
 };
-
-enum class ColorSpaces
-{
-  NORMAL,
-  SCALED,
-  CIE1931
-};
-
-class ColorSpace
-{
-public:
-  virtual RGBDouble RGBtoColorSpace(const RGB&);
-  virtual RGB colorSpaceToRGB(const RGBDouble&);
-  virtual ~ColorSpace() = default;
-};
-
-typedef std::unique_ptr<ColorSpace> ColorSpacePtr;
-
-ColorSpacePtr getColorSpace(ColorSpaces);
 
 enum class Quantizers
 {

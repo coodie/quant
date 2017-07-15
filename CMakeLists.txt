@@ -12,6 +12,7 @@ set(src_files
   src/RGBImage.cpp
   src/Compressor.cpp
   src/KDTree.cpp
+  src/ColorSpace.cpp
   src/ProgramParameters.cpp)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
