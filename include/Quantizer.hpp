@@ -10,7 +10,7 @@ enum class Quantizers
 class AbstractQuantizer
 {
 public:
-  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps) = 0;
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps) = 0;
   virtual ~AbstractQuantizer() = default;
 };
 

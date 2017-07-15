@@ -1,25 +1,25 @@
 #include "Quantizer.hpp"
 #include "KDTree.hpp"
 
-vecType getDistortion(const std::vector<vec> &trainingSet,
+VectorType getDistortion(const std::vector<Vector> &trainingSet,
                       const std::vector<size_t> &assignedCodeVector,
-                      const std::vector<vec> &codeVectors)
+                      const std::vector<Vector> &codeVectors)
 {
   size_t dim = trainingSet[0].size();
   size_t M = trainingSet.size();
 
-  vecType res = 0;
+  VectorType res = 0;
   for(size_t i = 0; i < trainingSet.size(); i++)
   {
     const auto &x = trainingSet[i];
     const auto &c = codeVectors[assignedCodeVector[i]];
-    res += norm(x-c)/((vecType)(M*dim));
+    res += norm(x-c)/((VectorType)(M*dim));
   }
 
   return res;
 }
 
-void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
+void assignCodeVectors(const std::vector<Vector> &trainingSet, const std::vector<Vector> &codeVectors, std::vector<size_t> &assignedCodeVector)
 {
   size_t dim = trainingSet.front().size();
   KDTree kdtree(dim, codeVectors);
@@ -34,12 +34,12 @@ void assignCodeVectors(const std::vector<vec> &trainingSet, const std::vector<ve
 class MedianCut : public AbstractQuantizer
 {
 private:
-  size_t findWidestDimension(const std::vector<vec> &vectors)
+  size_t findWidestDimension(const std::vector<Vector> &vectors)
   {
     std::vector<int> dim(vectors[0].size());
     std::iota(begin(dim), end(dim), 0);
 
-    std::vector<vecType> ranges;
+    std::vector<VectorType> ranges;
 
     std::transform(begin(dim), end(dim), std::back_inserter(ranges),
                    [&](auto d)
@@ -58,7 +58,7 @@ private:
     return std::distance(begin(ranges), it);
   }
 
-  std::pair<std::vector<vec>, std::vector<vec>> split(std::vector<vec> vectors, size_t dim)
+  std::pair<std::vector<Vector>, std::vector<Vector>> split(std::vector<Vector> vectors, size_t dim)
   {
     std::sort(begin(vectors), end(vectors),
               [=](const auto &a, const auto &b)
@@ -66,21 +66,21 @@ private:
                 return a[dim] < b[dim];
               });
     auto half = begin(vectors) + vectors.size()/2;
-    return std::make_pair(std::vector<vec>(begin(vectors), half),
-                          std::vector<vec>(half, end(vectors)));
+    return std::make_pair(std::vector<Vector>(begin(vectors), half),
+                          std::vector<Vector>(half, end(vectors)));
   }
 
-  std::vector<vec> run(const std::vector<vec> &vectors, size_t depth, size_t max_depth)
+  std::vector<Vector> run(const std::vector<Vector> &vectors, size_t depth, size_t max_depth)
   {
     if(depth >= max_depth || vectors.size() <= 1)
     {
-      auto avg = std::accumulate(begin(vectors), end(vectors), vec(vectors[0].size()),
+      auto avg = std::accumulate(begin(vectors), end(vectors), Vector(vectors[0].size()),
                                  [](const auto &a, const auto &b)
                                  {
                                    return a+b;
                                  });
 
-      avg /= (vecType)vectors[0].size();
+      avg /= (VectorType)vectors[0].size();
       return {avg};
     }
 
@@ -95,7 +95,7 @@ private:
 public:
   MedianCut() = default;
 
-  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType)
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType)
   {
     auto codeVectors = run(trainingSet, 0, n);
     std::vector<size_t> assignedCodeVector(trainingSet.size());
@@ -106,56 +106,56 @@ public:
 
 };
 
-vecType getDistortionInArea(const std::vector<vec> &trainingSet,
+VectorType getDistortionInArea(const std::vector<Vector> &trainingSet,
                             const std::vector<size_t> &area,
-                            const vec &codeVector)
+                            const Vector &codeVector)
 {
   size_t dim = trainingSet[0].size();
   size_t M = trainingSet.size();
 
-  vecType res = 0;
+  VectorType res = 0;
   for(size_t i = 0; i < area.size(); i++)
   {
     const auto &x = trainingSet[area[i]];
     auto tmp = norm(x-codeVector);
     res += tmp;
   }
-  return res/((vecType)(M*dim));
+  return res/((VectorType)(M*dim));
 }
 
-vec kahanSum(const std::vector<vec> &trainingSet, const std::vector<size_t> &area)
+Vector kahanSum(const std::vector<Vector> &trainingSet, const std::vector<size_t> &area)
 {
   size_t dim = trainingSet[0].size();
-  vec sum(dim);
-  vec c(dim);
+  Vector sum(dim);
+  Vector c(dim);
 
   for(auto x : area)
   {
-    vec y = trainingSet[x] - c;
-    vec t = sum + y;
+    Vector y = trainingSet[x] - c;
+    Vector t = sum + y;
     c = (t - sum) - y;
     sum = t;
   }
   return sum;
 }
 
-vec kahanSum(const std::vector<vec> &trainingSet)
+Vector kahanSum(const std::vector<Vector> &trainingSet)
 {
   size_t dim = trainingSet[0].size();
-  vec sum(dim);
-  vec c(dim);
+  Vector sum(dim);
+  Vector c(dim);
 
   for(auto x : trainingSet)
     {
-      vec y = x - c;
-      vec t = sum + y;
+      Vector y = x - c;
+      Vector t = sum + y;
       c = (t - sum) - y;
       sum = t;
     }
   return sum;
 }
 
-void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeVectors, std::vector<size_t> &assignedCodeVector)
+void fixCodeVectors(const std::vector<Vector> &trainingSet, std::vector<Vector> &codeVectors, std::vector<size_t> &assignedCodeVector)
 {
   std::vector<std::vector<size_t>> codeVectorArea(codeVectors.size());
 
@@ -167,8 +167,8 @@ void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeV
 
   auto cmpByDistortion = [&](const size_t &a, const size_t &b)
   {
-    vecType distA = getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
-    vecType distB = getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
+    VectorType distA = getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
+    VectorType distB = getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
     if( distA < distB)
       return true;
     return false;
@@ -187,7 +187,7 @@ void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeV
     codeVectors[i] = kahanSum(trainingSet, codeVectorArea[i]);
 
     if(codeVectorArea[i].size())
-      codeVectors[i] /= (vecType)codeVectorArea[i].size();
+      codeVectors[i] /= (VectorType)codeVectorArea[i].size();
     else
       codeVectors[i] = trainingSet[codeVectorArea[mx][std::rand() % codeVectorArea[mx].size()]];
   }
@@ -195,7 +195,7 @@ void fixCodeVectors(const std::vector<vec> &trainingSet, std::vector<vec> &codeV
   assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
 }
 
-void LBGIterate(const std::vector<vec> &trainingSet, std::vector<size_t> &assignedCodeVector, std::vector<vec> &codeVectors, vecType distortion, vecType eps)
+void LBGIterate(const std::vector<Vector> &trainingSet, std::vector<size_t> &assignedCodeVector, std::vector<Vector> &codeVectors, VectorType distortion, VectorType eps)
 {
   const size_t MAX_IT = 100;
   // iteration phase
@@ -204,7 +204,7 @@ void LBGIterate(const std::vector<vec> &trainingSet, std::vector<size_t> &assign
       assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
       fixCodeVectors(trainingSet, codeVectors, assignedCodeVector);
 
-      vecType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+      VectorType newDistortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
       if((distortion-newDistortion)/distortion <= eps)
         {
           distortion = newDistortion;
@@ -217,22 +217,22 @@ void LBGIterate(const std::vector<vec> &trainingSet, std::vector<size_t> &assign
 class LBGQuantizer : public AbstractQuantizer
 {
 public:
-  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps)
   {
     size_t dim = trainingSet[0].size();
     size_t maxCodeVectors = 1 << n;
 
     std::vector<size_t> assignedCodeVector(trainingSet.size());
-    std::vector<vec> codeVectors(1, vec(dim));
+    std::vector<Vector> codeVectors(1, Vector(dim));
     codeVectors.reserve(maxCodeVectors);
 
     // Initialize values
     codeVectors[0] = kahanSum(trainingSet);
-    codeVectors[0] /= (vecType)(trainingSet.size());
+    codeVectors[0] /= (VectorType)(trainingSet.size());
 
 
     for(auto &a : assignedCodeVector) a = 0;
-    vecType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
+    VectorType distortion = getDistortion(trainingSet, assignedCodeVector, codeVectors);
 
     while(codeVectors.size() < maxCodeVectors)
     {
@@ -241,8 +241,8 @@ public:
       concat(codeVectors, codeVectors);
       for(size_t i = 0; i < codeVectors.size()/2; i++)
       {
-        codeVectors[i] *= (vecType)(1+0.2);
-        codeVectors[i+codeVectors.size()/2] *= (vecType)(1-0.2);
+        codeVectors[i] *= (VectorType)(1+0.2);
+        codeVectors[i+codeVectors.size()/2] *= (VectorType)(1-0.2);
       }
 
       LBGIterate(trainingSet, assignedCodeVector, codeVectors, distortion, eps);
@@ -259,12 +259,12 @@ class LBGMedianCutQuantizer : public AbstractQuantizer
 {
 
 public:
-  virtual std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps)
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps)
   {
 
     std::vector<size_t> assignedCodeVector;
-    std::vector<vec> codeVectors;
-    vecType distortion = 0.0;
+    std::vector<Vector> codeVectors;
+    VectorType distortion = 0.0;
 
     std::tie(codeVectors, assignedCodeVector, distortion) = MedianCut().quantize(trainingSet, n, eps);
 

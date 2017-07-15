@@ -5,96 +5,99 @@
 
 #include "boost/container/small_vector.hpp"
 
-typedef double vecType;
-typedef boost::container::small_vector<vecType, 27> vec;
 
-static inline vec operator+(const vec &lhs, const vec &rhs)
+// Vector represents vector that is used in algorithms
+// VectorType describes type inside Vector
+typedef double VectorType;
+typedef boost::container::small_vector<VectorType, 27> Vector;
+
+static inline Vector operator+(const Vector &lhs, const Vector &rhs)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
-                 [](const vecType &a, const vecType &b){ return a+b; });
+                 [](const VectorType &a, const VectorType &b){ return a+b; });
   return res;
 }
 
-static inline vec operator+=(vec &lhs, const vec &rhs)
+static inline Vector operator+=(Vector &lhs, const Vector &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
-                 [](const vecType &a, const vecType &b){ return a+b; });
+                 [](const VectorType &a, const VectorType &b){ return a+b; });
   return lhs;
 }
 
-static inline vec operator-(const vec &lhs, const vec &rhs)
+static inline Vector operator-(const Vector &lhs, const Vector &rhs)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
-                 [](const vecType &a, const vecType &b){ return a-b; });
+                 [](const VectorType &a, const VectorType &b){ return a-b; });
   return res;
 }
 
-static inline vec operator-=(vec &lhs, const vec &rhs)
+static inline Vector operator-=(Vector &lhs, const Vector &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
-                 [](const vecType &a, const vecType &b){ return a-b; });
+                 [](const VectorType &a, const VectorType &b){ return a-b; });
   return lhs;
 }
 
-static inline vec operator*(const vec &lhs, const vec &rhs)
+static inline Vector operator*(const Vector &lhs, const Vector &rhs)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
-                 [](const vecType &a, const vecType &b){ return a*b; });
+                 [](const VectorType &a, const VectorType &b){ return a*b; });
   return res;
 }
 
-static inline vec operator*=(vec &lhs, const vec &rhs)
+static inline Vector operator*=(Vector &lhs, const Vector &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
-                 [](const vecType &a, const vecType &b){ return a*b; });
+                 [](const VectorType &a, const VectorType &b){ return a*b; });
   return lhs;
 }
 
-static inline vec operator/(const vec &lhs, const vec &rhs)
+static inline Vector operator/(const Vector &lhs, const Vector &rhs)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), std::back_inserter(res),
-                 [](const vecType &a, const vecType &b){ return a/b; });
+                 [](const VectorType &a, const VectorType &b){ return a/b; });
   return res;
 }
 
-static inline vec operator/=(vec &lhs, const vec &rhs)
+static inline Vector operator/=(Vector &lhs, const Vector &rhs)
 {
   std::transform(lhs.begin(), lhs.end(), rhs.begin(), lhs.begin(),
-                 [](const vecType &a, const vecType &b){ return a/b; });
+                 [](const VectorType &a, const VectorType &b){ return a/b; });
   return lhs;
 }
 
-static inline vec operator*(const vec &lhs, const vecType& c)
+static inline Vector operator*(const Vector &lhs, const VectorType& c)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), std::back_inserter(res),
-                 [&](const vecType &a){ return a*c; });
+                 [&](const VectorType &a){ return a*c; });
   return res;
 }
 
-static inline vec operator*=(vec &lhs, const vecType& c)
+static inline Vector operator*=(Vector &lhs, const VectorType& c)
 {
   std::transform(lhs.begin(), lhs.end(), lhs.begin(),
-                 [&](const vecType &a){ return a*c; });
+                 [&](const VectorType &a){ return a*c; });
   return lhs;
 }
 
-static inline vec operator/(const vec &lhs, const vecType& c)
+static inline Vector operator/(const Vector &lhs, const VectorType& c)
 {
-  vec res;
+  Vector res;
   std::transform(lhs.begin(), lhs.end(), std::back_inserter(res),
-                 [&](const vecType &a){ return a/c; });
+                 [&](const VectorType &a){ return a/c; });
   return res;
 }
 
-static inline vec operator/=(vec &lhs, const vecType& c)
+static inline Vector operator/=(Vector &lhs, const VectorType& c)
 {
   std::transform(lhs.begin(), lhs.end(), lhs.begin(),
-                 [&](const vecType &a){ return a/c; });
+                 [&](const VectorType &a){ return a/c; });
   return lhs;
 }
 
@@ -107,9 +110,9 @@ std::vector<T> concat(std::vector<T> &lhs, const std::vector<T> &rhs)
   return lhs;
 }
 
-static inline vecType norm(const vec &v)
+static inline VectorType norm(const Vector &v)
 {
-  vecType res = 0.0;
+  VectorType res = 0.0;
   for(auto x : v) res += x*x;
   return res;
 }

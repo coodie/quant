@@ -3,7 +3,7 @@
 
 RGBDouble ColorSpace::RGBtoColorSpace(const RGB &c)
 {
-  return {(vecType)c.at(0), (vecType)c.at(1), (vecType)c.at(2)};
+  return {(VectorType)c.at(0), (VectorType)c.at(1), (VectorType)c.at(2)};
 }
 
 RGB ColorSpace::colorSpaceToRGB(const RGBDouble &c)
@@ -19,7 +19,7 @@ public:
   {
     RGBDouble res;
     for(size_t i = 0; i < c.size(); i++)
-      res[i] = ((vecType)c[i]+128.0)/255;
+      res[i] = ((VectorType)c[i]+128.0)/255;
     return res;
   }
 

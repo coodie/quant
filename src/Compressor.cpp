@@ -9,7 +9,7 @@
 #include <sstream>
 #include <iomanip>
 
-std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr &cs)
+std::vector<Vector> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr &cs)
 {
   const std::vector<RGB> &img = image.img;
 
@@ -19,12 +19,12 @@ std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h
   size_t wBlocks = (xSize+w-1)/w;
   size_t hBlocks = (ySize+h-1)/h;
 
-  std::vector<vec> res(wBlocks*hBlocks);
+  std::vector<Vector> res(wBlocks*hBlocks);
 
   for(size_t i = 0; i < wBlocks; i++)
     for(size_t j = 0; j < hBlocks; j++)
     {
-      vec tmp(3*w*h);
+      Vector tmp(3*w*h);
       for(size_t x = i*w; x < i*w+w; x++)
         for(size_t y = j*h; y < j*h+h; y++)
         {
@@ -45,7 +45,7 @@ std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h
   return res;
 }
 
-RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr &cs)
+RGBImage getImageFromVectors(const std::vector<Vector> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr &cs)
 {
   size_t wBlocks = (xSize+w-1)/w;
   size_t hBlocks = (ySize+h-1)/h;
@@ -55,7 +55,7 @@ RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySiz
   for(size_t i = 0; i < wBlocks; i++)
     for(size_t j = 0; j < hBlocks; j++)
       {
-        const vec &tmp = blocks.at(i*hBlocks+j);
+        const Vector &tmp = blocks.at(i*hBlocks+j);
 
         for(size_t x = i*w; x < i*w+w; x++)
           for(size_t y = j*h; y < j*h+h; y++)
@@ -97,12 +97,12 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
                                                        const ColorSpacePtr &colorSpace,
                                                        int blockWidth,
                                                        int blockHeight,
-                                                       vecType eps,
+                                                       VectorType eps,
                                                        int N)
 {
-  std::vector<vec> codeVectors;
+  std::vector<Vector> codeVectors;
   std::vector<size_t> assignedCodeVector;
-  vecType distortion;
+  VectorType distortion;
 
   auto compressionTime = measureExecutionTime([&](){
       auto trainingSet = getBlocksAsVectorsFromImage(image, blockWidth, blockHeight, colorSpace);
@@ -127,7 +127,7 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
     for(size_t i = 0; i < image.img.size(); i++)
     {
       for(auto j : RGBRange)
-        distortion += std::pow((vecType)image.img[i][j] - (vecType)img.img[i][j], 2);
+        distortion += std::pow((VectorType)image.img[i][j] - (VectorType)img.img[i][j], 2);
     }
     distortion /= image.img.size()*3;
   }
@@ -142,7 +142,7 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
 
 RGBImage decompress(const CompressedImage& cImg, const ColorSpacePtr& cs)
 {
-  std::vector<vec> quantizedTrainingSet(cImg.assignedCodeVector.size());
+  std::vector<Vector> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
 

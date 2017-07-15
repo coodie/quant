@@ -9,7 +9,7 @@
 class CompressionRaport
 {
 public:
-  vecType distortion;
+  VectorType distortion;
   float bitsPerPixel;
   size_t uncompressedSize;
   size_t compressedSize;
@@ -24,19 +24,19 @@ public:
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
   size_t sizeInBits();
-  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, vecType eps, int N);
+  friend std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, VectorType eps, int N);
   friend RGBImage decompress(const CompressedImage&, const ColorSpacePtr&);
 
 private:
-  std::vector<vec> codeVectors;
+  std::vector<Vector> codeVectors;
   std::vector<size_t> assignedCodeVector;
   size_t xSize, ySize;
   size_t blockWidth, blockHeight;
 };
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, vecType eps, int N);
+std::pair<CompressedImage, CompressionRaport> compress(const RGBImage&, const QuantizerPtr &quantizer, const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight, VectorType eps, int N);
 RGBImage decompress(const CompressedImage&, const ColorSpacePtr&);
 
-std::vector<vec> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr&);
-RGBImage getImageFromVectors(const std::vector<vec> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr&);
-std::tuple<std::vector<vec>, std::vector<size_t>, vecType> quantize(const std::vector<vec> &trainingSet, size_t n, vecType eps);
+std::vector<Vector> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr&);
+RGBImage getImageFromVectors(const std::vector<Vector> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr&);
+std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps);

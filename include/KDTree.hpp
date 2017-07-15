@@ -7,8 +7,8 @@
 class KDTree
 {
 public:
-  KDTree(size_t dim, const std::vector<vec>&);
-  size_t nearestNeighbour(const vec &pt) const;
+  KDTree(size_t dim, const std::vector<Vector>&);
+  size_t nearestNeighbour(const Vector &pt) const;
   ~KDTree();
 
 private:
