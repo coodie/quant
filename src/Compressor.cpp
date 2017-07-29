@@ -9,6 +9,26 @@
 #include <sstream>
 #include <iomanip>
 
+std::vector<CharVector> vectorsToCharVectorsColorSpaced(const std::vector<Vector>& vectors, const ColorSpacePtr &cs)
+{
+  std::vector<CharVector> res;
+  std::transform(begin(vectors), end(vectors), std::back_inserter(res),
+                 [&](const Vector& a)
+                 {
+                   CharVector res(a.size());
+                   for(size_t i = 0; i < a.size(); i+=3)
+                   {
+                     RGB unscaled = cs->colorSpaceToRGB({a[i],a[i+1],a[i+2]});
+                     res[i] = unscaled.at(0);
+                     res[i+1] = unscaled.at(1);
+                     res[i+2] = unscaled.at(2);
+                   }
+                   return res;
+                 }
+    );
+  return res;
+}
+
 std::vector<Vector> getBlocksAsVectorsFromImage(const RGBImage& image, int w, int h, const ColorSpacePtr &cs)
 {
   const std::vector<RGB> &img = image.img;
@@ -45,7 +65,7 @@ std::vector<Vector> getBlocksAsVectorsFromImage(const RGBImage& image, int w, in
   return res;
 }
 
-RGBImage getImageFromVectors(const std::vector<Vector> &blocks, int xSize, int ySize, int w, int h, const ColorSpacePtr &cs)
+RGBImage getImageFromVectors(const std::vector<CharVector> &blocks, int xSize, int ySize, int w, int h)
 {
   size_t wBlocks = (xSize+w-1)/w;
   size_t hBlocks = (ySize+h-1)/h;
@@ -55,7 +75,7 @@ RGBImage getImageFromVectors(const std::vector<Vector> &blocks, int xSize, int y
   for(size_t i = 0; i < wBlocks; i++)
     for(size_t j = 0; j < hBlocks; j++)
       {
-        const Vector &tmp = blocks.at(i*hBlocks+j);
+        const CharVector &tmp = blocks.at(i*hBlocks+j);
 
         for(size_t x = i*w; x < i*w+w; x++)
           for(size_t y = j*h; y < j*h+h; y++)
@@ -65,9 +85,8 @@ RGBImage getImageFromVectors(const std::vector<Vector> &blocks, int xSize, int y
 
             if(imgIndex < imgData.size())
             {
-              RGB unscaled = cs->colorSpaceToRGB({tmp.at(vecIndex), tmp.at(vecIndex+1), tmp.at(vecIndex+2)});
               for(auto shift : RGBRange)
-                imgData.at(imgIndex).at(shift) = unscaled.at(shift);
+                imgData.at(imgIndex).at(shift) = tmp.at(vecIndex+shift);
             }
           }
       }
@@ -92,7 +111,7 @@ std::chrono::duration<double> measureExecutionTime(const std::function<void()> &
   return executionTime;
 }
 
-std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
+std::pair<CompressedImage, CompressionRaport> CompressedImage::compress(const RGBImage& image,
                                                        const QuantizerPtr &quantizer,
                                                        const ColorSpacePtr &colorSpace,
                                                        int blockWidth,
@@ -111,7 +130,7 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
     });
 
   CompressedImage resImg;
-  resImg.codeVectors = std::move(codeVectors);
+  resImg.codeVectors = vectorsToCharVectorsColorSpaced(codeVectors, colorSpace);
   resImg.assignedCodeVector = std::move(assignedCodeVector);
   resImg.xSize = image.xSize;
   resImg.ySize = image.ySize;
@@ -132,7 +151,6 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
     distortion /= image.img.size()*3;
   }
 
-
   size_t uncompressedSize = image.sizeInBytes();
   size_t compressedSize = resImg.sizeInBits()/8;
 
@@ -140,13 +158,13 @@ std::pair<CompressedImage, CompressionRaport> compress(const RGBImage& image,
   return std::make_pair(resImg, raport);
 }
 
-RGBImage decompress(const CompressedImage& cImg, const ColorSpacePtr& cs)
+RGBImage CompressedImage::decompress(const CompressedImage& cImg, const ColorSpacePtr& cs)
 {
-  std::vector<Vector> quantizedTrainingSet(cImg.assignedCodeVector.size());
+  std::vector<CharVector> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for(size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
 
-  RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight, cs);
+  RGBImage res = getImageFromVectors(quantizedTrainingSet, cImg.xSize, cImg.ySize, cImg.blockWidth, cImg.blockHeight);
   return res;
 }
 
@@ -170,7 +188,14 @@ size_t CompressedImage::sizeInBits()
 
 void CompressedImage::saveToFile(const std::string &path)
 {
-  throw std::runtime_error("not implemented");
+  size_t bitsPerCodeVector = smallestPow2(assignedCodeVector.size());
+  assert(bitsPerCodeVector <= 24);
+  std::fstream file(path);
+  file << xSize << ' '
+       << ySize << ' '
+       << blockWidth << ' '
+       << blockHeight << std::endl;
+
 }
 
 void CompressedImage::loadFromFile(const std::string &path)

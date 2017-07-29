@@ -50,9 +50,9 @@ int main(int argc, char **argv)
   QuantizerPtr quantizer = getQuantizer((Quantizers)par->quantizer);
   ColorSpacePtr colorspace = getColorSpace((ColorSpaces)par->colorspace);
 
-  std::tie(cImg, raport) = compress(img, quantizer, colorspace, par->width, par->height, par->eps, par->n);
+  std::tie(cImg, raport) = CompressedImage::compress(img, quantizer, colorspace, par->width, par->height, par->eps, par->n);
   if(par->raport)
     std::cout << raport;
-  RGBImage decompressed = decompress(cImg, colorspace);
+  RGBImage decompressed = CompressedImage::decompress(cImg, colorspace);
   decompressed.saveToFile(par->saveto);
 }

@@ -20,7 +20,8 @@ TEST(compressor_test, something)
     int h = 1;
 
     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
-    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
+    auto converted = vectorsToCharVectorsColorSpaced(blocks, cs);
+    auto expected = getImageFromVectors(converted, testImg.xSize, testImg.ySize, w, h);
 
     EXPECT_EQ(expected.img, testImg.img);
   }
@@ -30,7 +31,8 @@ TEST(compressor_test, something)
     int h = 2;
 
     auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
-    auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
+    auto converted = vectorsToCharVectorsColorSpaced(blocks, cs);
+    auto expected = getImageFromVectors(converted, testImg.xSize, testImg.ySize, w, h);
 
     EXPECT_EQ(expected.img, testImg.img);
   }
@@ -40,7 +42,8 @@ TEST(compressor_test, something)
      int h = 3;
 
      auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
-     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
+     auto converted = vectorsToCharVectorsColorSpaced(blocks, cs);
+     auto expected = getImageFromVectors(converted, testImg.xSize, testImg.ySize, w, h);
 
      EXPECT_EQ(expected.img, testImg.img);
    }
@@ -50,7 +53,8 @@ TEST(compressor_test, something)
      int h = 4;
 
      auto blocks = getBlocksAsVectorsFromImage(testImg, w, h, cs);
-     auto expected = getImageFromVectors(blocks, testImg.xSize, testImg.ySize, w, h, cs);
+     auto converted = vectorsToCharVectorsColorSpaced(blocks, cs);
+     auto expected = getImageFromVectors(converted, testImg.xSize, testImg.ySize, w, h);
 
      EXPECT_EQ(expected.img, testImg.img);
    }

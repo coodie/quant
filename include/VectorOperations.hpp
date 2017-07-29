@@ -10,6 +10,7 @@
 // VectorType describes type inside Vector
 typedef double VectorType;
 typedef boost::container::small_vector<VectorType, 27> Vector;
+typedef boost::container::small_vector<char, 27> CharVector;
 
 static inline Vector operator+(const Vector &lhs, const Vector &rhs)
 {
