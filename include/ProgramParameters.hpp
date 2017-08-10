@@ -1,9 +1,8 @@
 #pragma once
-#include <string>
 #include <memory>
+#include <string>
 
-struct ProgramParameters
-{
+struct ProgramParameters {
   int n;
   int width;
   int height;
@@ -16,5 +15,5 @@ struct ProgramParameters
   std::string saveto;
 };
 
-ProgramParameters* getParams();
+ProgramParameters *getParams();
 void paramsInitialize();

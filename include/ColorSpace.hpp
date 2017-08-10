@@ -1,16 +1,14 @@
 #pragma once
 
-#include "RGBImage.hpp"
 #include <memory>
+#include "RGBImage.hpp"
 
-enum class ColorSpaces
-{NORMAL, SCALED, CIE1931};
+enum class ColorSpaces { NORMAL, SCALED, CIE1931 };
 
-class ColorSpace
-{
-public:
-  virtual RGBDouble RGBtoColorSpace(const RGB&);
-  virtual RGB colorSpaceToRGB(const RGBDouble&);
+class ColorSpace {
+ public:
+  virtual RGBDouble RGBtoColorSpace(const RGB &);
+  virtual RGB colorSpaceToRGB(const RGBDouble &);
   virtual ~ColorSpace() = default;
 };
 

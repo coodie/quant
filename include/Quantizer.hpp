@@ -4,13 +4,13 @@
 #include <memory>
 #include <tuple>
 
-enum class Quantizers
-{LBG, MEDIAN_CUT, LBG_MEDIAN_CUT};
+enum class Quantizers { LBG, MEDIAN_CUT, LBG_MEDIAN_CUT };
 
-class AbstractQuantizer
-{
-public:
-  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType> quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps) = 0;
+class AbstractQuantizer {
+ public:
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType>
+  quantize(const std::vector<Vector> &trainingSet, size_t n,
+           VectorType eps) = 0;
   virtual ~AbstractQuantizer() = default;
 };
 

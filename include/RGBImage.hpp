@@ -1,18 +1,18 @@
 #pragma once
-#include <string>
-#include <vector>
 #include <memory>
+#include <string>
 #include <tuple>
+#include <vector>
 
 const static int MAX_COL_BITS = 8;
 const static int MAX_COL = 1 << MAX_COL_BITS;
 
-#define RGBRange {0, 1, 2}
+#define RGBRange \
+  { 0, 1, 2 }
 typedef std::array<char, 3> RGB;
 typedef std::array<double, 3> RGBDouble;
 
-class RGBImage
-{
+class RGBImage {
  public:
   RGBImage() = default;
   RGBImage(const std::string &path);
