@@ -85,17 +85,17 @@ Quant performs operations on files based on their extension:
 
 Compression:
 ```
-quant --file input.ppm -o output.quant
+quant input.ppm -o output.quant
 ```
 
 Decompression:
 ```
-quant --file input.quant -o output.ppm
+quant input.quant -o output.ppm
 ```
 
 Showcase (how file looks like after compression):
 ```
-quant --file input.ppm -o output.ppm
+quant input.ppm -o output.ppm
 ```
 
 For more options (playing with parameters) use:

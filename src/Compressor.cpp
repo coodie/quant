@@ -200,7 +200,6 @@ void CompressedImage::saveToFile(const std::string &path) {
     << ySize << ' ' 
     << blockWidth << ' ' 
     << blockHeight;
-  std::cout << bitsPerCodeVector << std::endl;
 
   file.write("\n", 1);
 

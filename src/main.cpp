@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   auto par = getParams();
   desc.add_options()
     ("help", "Print help messages")
-    (",n", po::value<int>(&par->n)->default_value(10), "bits per codevector")
+    (",n", po::value<int>(&par->n)->default_value(8), "bits per codevector")
     (",e", po::value<float>(&par->eps)->default_value(0.000001), "eps parameter for quantization algorithm")
     (",w", po::value<int>(&par->width)->default_value(2), "Width of block")
     (",h", po::value<int>(&par->height)->default_value(2), "Height of block") 
@@ -57,7 +57,11 @@ int main(int argc, char **argv)
     ("c,colorspace", po::value<int>(&par->colorspace)->default_value((int)ColorSpaces::SCALED), "Pick ColorSpace");
 
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
+
+  po::positional_options_description p;
+  p.add("file", -1);
+
+  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
 
   if (vm.count("help")) 
   {
