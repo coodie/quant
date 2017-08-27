@@ -23,17 +23,20 @@ class CompressedImage {
   void saveToFile(const std::string &path);
   void loadFromFile(const std::string &path);
   size_t sizeInBits();
-  static std::pair<CompressedImage, CompressionRaport> compress(
-      const RGBImage &, const QuantizerPtr &quantizer,
-      const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight,
-      VectorType eps, int N);
-  static RGBImage decompress(const CompressedImage &, const ColorSpacePtr &);
 
- private:
+  static std::pair<CompressedImage, CompressionRaport> compress(
+      const RGBImage &image, Quantizers quantizer, ColorSpaces colorSpace, 
+      int blockWidth, int blockHeight, VectorType eps, int N);
+
+  static RGBImage decompress(const CompressedImage &);
+
+ //private:
   std::vector<CharVector> codeVectors;
   std::vector<size_t> assignedCodeVector;
   size_t xSize, ySize;
   size_t blockWidth, blockHeight;
+  ColorSpaces colorSpace;
+  Quantizers quantizer;
 };
 
 std::vector<CharVector> vectorsToCharVectorsColorSpaced(

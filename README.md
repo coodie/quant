@@ -52,8 +52,19 @@ git clone https://github.com/coodie/quant
 cd quant
 ```
 
-Time to build the project:
+Time to build and install the project:
 ```
+mkdir build
+cd build
+cmake ..
+make -j
+make install
+```
+
+In order to override compiler used by cmake 
+
+```
+export CXX=/path/to/compiler
 mkdir build
 cd build
 cmake ..
@@ -70,9 +81,21 @@ pngtopnm file.png > file.ppm
 jpegtopnm file.jpg > file.ppm
 ```
 
-Once you have your `.ppm` file here is quick way to use your program:
+Quant performs operations on files based on their extension:
+
+Compression:
 ```
-quant --file input.ppm -o output.ppm 
+quant --file input.ppm -o output.quant
+```
+
+Decompression:
+```
+quant --file input.quant -o output.ppm
+```
+
+Showcase (how file looks like after compression):
+```
+quant --file input.ppm -o output.ppm
 ```
 
 For more options (playing with parameters) use:

@@ -2,7 +2,21 @@ cmake_minimum_required(VERSION 3.2.2)
 project (quant)
 
 ####### Compiler options
-add_compile_options(--std=c++14 -O3 -g -Wall)
+add_compile_options(--std=c++14 -Wall -Wno-missing-braces)
+
+# CMake automatically adds -g to Debug build
+# CMake automatically adds -O3 and -NDEBUG to Release build
+set(CMAKE_CXX_FLAGS_RELEASE 
+    "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
+
+
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+      "Choose the type of build, options are: Debug Release
+RelWithDebInfo MinSizeRel."
+      FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
 
 ####### Project options
 include_directories(include)

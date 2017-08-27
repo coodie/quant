@@ -30,7 +30,7 @@ void assignCodeVectors(const std::vector<Vector> &trainingSet,
 }
 
 class MedianCut : public AbstractQuantizer {
- private:
+private:
   size_t findWidestDimension(const std::vector<Vector> &vectors) {
     std::vector<int> dim(vectors[0].size());
     std::iota(begin(dim), end(dim), 0);
@@ -51,8 +51,8 @@ class MedianCut : public AbstractQuantizer {
     return std::distance(begin(ranges), it);
   }
 
-  std::pair<std::vector<Vector>, std::vector<Vector>> split(
-      std::vector<Vector> vectors, size_t dim) {
+  std::pair<std::vector<Vector>, std::vector<Vector>>
+  split(std::vector<Vector> vectors, size_t dim) {
     std::sort(begin(vectors), end(vectors),
               [=](const auto &a, const auto &b) { return a[dim] < b[dim]; });
     auto half = begin(vectors) + vectors.size() / 2;
@@ -79,7 +79,7 @@ class MedianCut : public AbstractQuantizer {
     return res1;
   }
 
- public:
+public:
   MedianCut() = default;
 
   virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType>
@@ -152,14 +152,16 @@ void fixCodeVectors(const std::vector<Vector> &trainingSet,
         getDistortionInArea(trainingSet, codeVectorArea[a], codeVectors[a]);
     VectorType distB =
         getDistortionInArea(trainingSet, codeVectorArea[b], codeVectors[b]);
-    if (distA < distB) return true;
+    if (distA < distB)
+      return true;
     return false;
   };
 
   size_t mx = 0;
 
   for (size_t i = 0; i < codeVectors.size(); i++) {
-    if (cmpByDistortion(mx, i)) mx = i;
+    if (cmpByDistortion(mx, i))
+      mx = i;
   }
 
   for (size_t i = 0; i < codeVectors.size(); i++) {
@@ -197,7 +199,7 @@ void LBGIterate(const std::vector<Vector> &trainingSet,
 }
 
 class LBGQuantizer : public AbstractQuantizer {
- public:
+public:
   virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType>
   quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps) {
     size_t dim = trainingSet[0].size();
@@ -211,7 +213,8 @@ class LBGQuantizer : public AbstractQuantizer {
     codeVectors[0] = kahanSum(trainingSet);
     codeVectors[0] /= (VectorType)(trainingSet.size());
 
-    for (auto &a : assignedCodeVector) a = 0;
+    for (auto &a : assignedCodeVector)
+      a = 0;
     VectorType distortion =
         getDistortion(trainingSet, assignedCodeVector, codeVectors);
 
@@ -234,7 +237,7 @@ class LBGQuantizer : public AbstractQuantizer {
 };
 
 class LBGMedianCutQuantizer : public AbstractQuantizer {
- public:
+public:
   virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType>
   quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps) {
     std::vector<size_t> assignedCodeVector;
@@ -255,15 +258,15 @@ class LBGMedianCutQuantizer : public AbstractQuantizer {
 
 QuantizerPtr getQuantizer(Quantizers q) {
   switch (q) {
-    case Quantizers::LBG:
-      return QuantizerPtr(new LBGQuantizer());
-      break;
-    case Quantizers::MEDIAN_CUT:
-      return QuantizerPtr(new MedianCut());
-      break;
-    case Quantizers::LBG_MEDIAN_CUT:
-      return QuantizerPtr(new LBGMedianCutQuantizer());
-      break;
+  case Quantizers::LBG:
+    return QuantizerPtr(new LBGQuantizer());
+    break;
+  case Quantizers::MEDIAN_CUT:
+    return QuantizerPtr(new MedianCut());
+    break;
+  case Quantizers::LBG_MEDIAN_CUT:
+    return QuantizerPtr(new LBGMedianCutQuantizer());
+    break;
   }
   return nullptr;
 }

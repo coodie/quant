@@ -11,7 +11,7 @@ RGB ColorSpace::colorSpaceToRGB(const RGBDouble &c) {
 }
 
 class ScaledColor : public ColorSpace {
- public:
+public:
   ScaledColor() = default;
   RGBDouble RGBtoColorSpace(const RGB &c) override {
     RGBDouble res;
@@ -29,7 +29,7 @@ class ScaledColor : public ColorSpace {
 };
 
 class Cie1931 : public ColorSpace {
- public:
+public:
   Cie1931() = default;
   RGBDouble RGBtoColorSpace(const RGB &c) override {
     return {(c[0] * 0.490 + c[1] * 0.310 + c[2] * 0.200) / 0.17697,
@@ -48,15 +48,15 @@ class Cie1931 : public ColorSpace {
 
 ColorSpacePtr getColorSpace(ColorSpaces cs) {
   switch (cs) {
-    case ColorSpaces::NORMAL:
-      return ColorSpacePtr(new ColorSpace());
-      break;
-    case ColorSpaces::CIE1931:
-      return ColorSpacePtr(new Cie1931());
-      break;
-    case ColorSpaces::SCALED:
-      return ColorSpacePtr(new ScaledColor());
-      break;
+  case ColorSpaces::NORMAL:
+    return ColorSpacePtr(new ColorSpace());
+    break;
+  case ColorSpaces::CIE1931:
+    return ColorSpacePtr(new Cie1931());
+    break;
+  case ColorSpaces::SCALED:
+    return ColorSpacePtr(new ScaledColor());
+    break;
   }
   return nullptr;
 }

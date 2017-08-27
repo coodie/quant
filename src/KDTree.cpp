@@ -6,7 +6,7 @@ typedef KDTreeVectorOfVectorsAdaptor<std::vector<Vector>, VectorType>
     nanoflannKDTree;
 
 class KDTree::KDTreeImpl {
- public:
+public:
   KDTreeImpl(size_t dim, const std::vector<Vector> &pts) : kdtree(dim, pts) {
     kdtree.index->buildIndex();
   }

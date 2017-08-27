@@ -7,8 +7,8 @@ struct ProgramParameters {
   int width;
   int height;
   float eps;
-  bool d;
   bool raport;
+  bool show;
   int quantizer;
   int colorspace;
   std::string file;

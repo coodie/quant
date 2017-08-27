@@ -9,8 +9,9 @@
 #include <set>
 #include <sstream>
 
-std::vector<CharVector> vectorsToCharVectorsColorSpaced(
-    const std::vector<Vector> &vectors, const ColorSpacePtr &cs) {
+std::vector<CharVector>
+vectorsToCharVectorsColorSpaced(const std::vector<Vector> &vectors,
+                                const ColorSpacePtr &cs) {
   std::vector<CharVector> res;
   std::transform(
       begin(vectors), end(vectors), std::back_inserter(res),
@@ -90,8 +91,8 @@ RGBImage getImageFromVectors(const std::vector<CharVector> &blocks, int xSize,
   return img;
 }
 
-std::chrono::duration<double> measureExecutionTime(
-    const std::function<void()> &f) {
+std::chrono::duration<double>
+measureExecutionTime(const std::function<void()> &f) {
   std::chrono::time_point<std::chrono::system_clock> start, end;
   start = std::chrono::system_clock::now();
 
@@ -103,23 +104,26 @@ std::chrono::duration<double> measureExecutionTime(
   return executionTime;
 }
 
-std::pair<CompressedImage, CompressionRaport> CompressedImage::compress(
-    const RGBImage &image, const QuantizerPtr &quantizer,
-    const ColorSpacePtr &colorSpace, int blockWidth, int blockHeight,
-    VectorType eps, int N) {
+std::pair<CompressedImage, CompressionRaport>
+CompressedImage::compress(const RGBImage &image, Quantizers quantizer,
+                          ColorSpaces colorSpace, int blockWidth,
+                          int blockHeight, VectorType eps, int N) {
   std::vector<Vector> codeVectors;
   std::vector<size_t> assignedCodeVector;
   VectorType distortion;
 
+  auto colorSpacePtr = getColorSpace(colorSpace);
+  auto quantizerPtr = getQuantizer(quantizer);
+
   auto compressionTime = measureExecutionTime([&]() {
     auto trainingSet =
-        getBlocksAsVectorsFromImage(image, blockWidth, blockHeight, colorSpace);
+        getBlocksAsVectorsFromImage(image, blockWidth, blockHeight, colorSpacePtr);
     std::tie(codeVectors, assignedCodeVector, distortion) =
-        quantizer->quantize(trainingSet, N, eps);
+        quantizerPtr->quantize(trainingSet, N, eps);
   });
 
   CompressedImage resImg;
-  resImg.codeVectors = vectorsToCharVectorsColorSpaced(codeVectors, colorSpace);
+  resImg.codeVectors = vectorsToCharVectorsColorSpaced(codeVectors, colorSpacePtr);
   resImg.assignedCodeVector = std::move(assignedCodeVector);
   resImg.xSize = image.xSize;
   resImg.ySize = image.ySize;
@@ -131,7 +135,7 @@ std::pair<CompressedImage, CompressionRaport> CompressedImage::compress(
 
   // Decompress image temporarily to compute real distortion
   {
-    RGBImage img = decompress(resImg, colorSpace);
+    RGBImage img = decompress(resImg);
     distortion = 0;
     for (size_t i = 0; i < image.img.size(); i++) {
       for (auto j : RGBRange)
@@ -149,8 +153,7 @@ std::pair<CompressedImage, CompressionRaport> CompressedImage::compress(
   return std::make_pair(resImg, raport);
 }
 
-RGBImage CompressedImage::decompress(const CompressedImage &cImg,
-                                     const ColorSpacePtr &cs) {
+RGBImage CompressedImage::decompress(const CompressedImage &cImg) {
   std::vector<CharVector> quantizedTrainingSet(cImg.assignedCodeVector.size());
   for (size_t i = 0; i < quantizedTrainingSet.size(); i++)
     quantizedTrainingSet[i] = cImg.codeVectors[cImg.assignedCodeVector[i]];
@@ -163,7 +166,8 @@ RGBImage CompressedImage::decompress(const CompressedImage &cImg,
 
 size_t smallestPow2(size_t n) {
   int p = 0;
-  while (n /= 2) p++;
+  while (n /= 2)
+    p++;
   return p;
 }
 
@@ -172,52 +176,95 @@ size_t CompressedImage::sizeInBits() {
   size_t codeVectorBits = smallestPow2(codeVectors.size());
   size_t dimension = blockWidth * blockHeight;
   size_t bits = codeVectorBits * assignedCodeVector.size() +
-                dimension * codeVectors.size() * 8 * 3;  // Store codevectors
+                dimension * codeVectors.size() * 8 * 3; // Store codevectors
 
-  return ((bits + 7) / 8) * 8;  // align
+  return ((bits + 7) / 8) * 8; // align
 }
 
-void writeBits(std::fstream &file, size_t data, size_t bits, char &prevByte,
-               size_t &prevBits) {
-  prevBits += bits;
-  while (bits > 0) {
-    char byte = prevByte;
-  }
+template<typename T, typename U>
+T align(T x, U a)
+{
+    return ((x+a-1)/a)*a;
 }
 
 void CompressedImage::saveToFile(const std::string &path) {
-  size_t bitsPerCodeVector = smallestPow2(assignedCodeVector.size());
+  size_t bitsPerCodeVector = smallestPow2(codeVectors.size());
   assert(bitsPerCodeVector <= 24);
-  std::fstream file(path);
-  file << bitsPerCodeVector << ' ' << assignedCodeVector.size() << ' ' << xSize
-       << ' ' << ySize << ' ' << blockWidth << ' ' << blockHeight << std::endl;
+
+  std::ofstream file(path);
+  file 
+    << bitsPerCodeVector << ' ' 
+    << (int)colorSpace << ' '
+    << assignedCodeVector.size() << ' ' 
+    << xSize << ' ' 
+    << ySize << ' ' 
+    << blockWidth << ' ' 
+    << blockHeight;
+  std::cout << bitsPerCodeVector << std::endl;
+
+  file.write("\n", 1);
 
   size_t codeVectorSize = blockWidth * blockHeight * 3;
 
   // Write codeVectors first
   assert((1 << bitsPerCodeVector) == codeVectors.size());
+  std::vector<char> tmp(codeVectorSize);
   for (size_t i = 0; i < codeVectors.size(); i++)
-    for (size_t j = 0; j < codeVectorSize; j++) file << codeVectors[i][j];
-  file << std::endl;
-
-  bitsPerCodeVector = ((bitsPerCodeVector + 7) / 8) * 8;
-  int bytesPerCodeVector = bitsPerCodeVector / 8;
-  for (size_t i = 0; i < assignedCodeVector.size(); i++) {
-    char *cur = reinterpret_cast<char *>(&assignedCodeVector[i]);
-    for (size_t j = 0; j < bytesPerCodeVector; j++) file << cur[j];
+  {
+    std::copy(std::begin(codeVectors[i]), std::end(codeVectors[i]), std::begin(tmp));
+    file.write(tmp.data(), codeVectorSize);
   }
+
+  int bytesPerCodeVector = align(bitsPerCodeVector, 8) / 8;
+
+  for (size_t i = 0; i < assignedCodeVector.size(); i++) 
+  {
+    char *cur = reinterpret_cast<char *>(&assignedCodeVector[i]);
+    file.write(cur, bytesPerCodeVector);
+  }
+
+  file.flush();
+  file.close();
 }
 
 void CompressedImage::loadFromFile(const std::string &path) {
-  size_t bitsPerCodeVector;
-  std::fstream file(path);
-  file >> bitsPerCodeVector >> xSize >> ySize >> blockWidth >> blockHeight;
-  assert(bitsPerCodeVector <= 24);
-  for (size_t i = 0; i < codeVectors.size(); i++)
-    for (size_t j = 0; j < codeVectorSize; j++) file >> codeVectors[i][j];
-  file << std::endl;
+  std::ifstream file(path);
 
-  throw std::runtime_error("not implemented");
+  char skip;
+  size_t bitsPerCodeVector, assignedCodeVectorSize;
+
+  int colorSpaceInt;
+  file 
+    >> bitsPerCodeVector
+    >> colorSpaceInt
+    >> assignedCodeVectorSize
+    >> xSize
+    >> ySize
+    >> blockWidth
+    >> blockHeight;
+
+  colorSpace = (ColorSpaces)colorSpaceInt;
+  file.read(&skip, 1);
+
+  size_t codeVectorSize = blockWidth * blockHeight * 3;
+
+  codeVectors.resize(1 << bitsPerCodeVector);
+  std::vector<char> tmp(codeVectorSize);
+  for (size_t i = 0; i < codeVectors.size(); i++)
+  {
+    codeVectors[i].resize(codeVectorSize);
+    file.read(tmp.data(), codeVectorSize);
+    std::copy(std::begin(tmp), std::end(tmp), std::begin(codeVectors[i]));
+  }
+
+  int bytesPerCodeVector = align(bitsPerCodeVector, 8) / 8;
+  assignedCodeVector.resize(assignedCodeVectorSize);
+
+  for (size_t i = 0; i < assignedCodeVector.size(); i++) {
+    char *cur = reinterpret_cast<char *>(&assignedCodeVector[i]);
+    file.read(cur, bytesPerCodeVector);
+  }
+  file.close();
 }
 
 std::string prettyPrintBytes(size_t bytes) {
