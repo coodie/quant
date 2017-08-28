@@ -18,10 +18,10 @@ KDTree::KDTree(size_t dim, const std::vector<Vector> &pts) {
 }
 
 size_t KDTree::nearestNeighbour(const Vector &pt) const {
-  static size_t num_results = 1;
-  static std::vector<size_t> ret_indexes(num_results);
-  static std::vector<VectorType> out_dists_sqr(num_results);
-  static nanoflann::KNNResultSet<VectorType> resultSet(num_results);
+  size_t num_results = 1;
+  std::vector<size_t> ret_indexes(num_results);
+  std::vector<VectorType> out_dists_sqr(num_results);
+  nanoflann::KNNResultSet<VectorType> resultSet(num_results);
   resultSet.init(&ret_indexes[0], &out_dists_sqr[0]);
   impl->kdtree.index->findNeighbors(resultSet, &pt[0],
                                     nanoflann::SearchParams(10));

@@ -46,7 +46,7 @@ if(Boost_FOUND)
 
     include_directories(${Boost_INCLUDE_DIRS})
     add_executable(quant src/main.cpp)
-    target_link_libraries(quant quantsrc)
+    target_link_libraries(quant quantsrc pthread)
 endif()
 
 ####### Add GTest
@@ -55,5 +55,5 @@ enable_testing()
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCEDIR})
 
 add_executable(runtest src/test.cpp)
-target_link_libraries(runtest gtest gtest_main quantsrc)
+target_link_libraries(runtest gtest gtest_main quantsrc pthread)
 add_test(runtest runtest)

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <tuple>
+#include <thread>
 
 enum class Quantizers { LBG, MEDIAN_CUT, LBG_MEDIAN_CUT };
 

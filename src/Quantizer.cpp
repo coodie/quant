@@ -1,5 +1,7 @@
 #include "Quantizer.hpp"
 #include "KDTree.hpp"
+#include <thread>
+#include <iostream>
 
 VectorType getDistortion(const std::vector<Vector> &trainingSet,
                          const std::vector<size_t> &assignedCodeVector,
@@ -17,16 +19,38 @@ VectorType getDistortion(const std::vector<Vector> &trainingSet,
   return res;
 }
 
+
+size_t ncpu = std::thread::hardware_concurrency();
+
 void assignCodeVectors(const std::vector<Vector> &trainingSet,
                        const std::vector<Vector> &codeVectors,
                        std::vector<size_t> &assignedCodeVector) {
   size_t dim = trainingSet.front().size();
-  KDTree kdtree(dim, codeVectors);
+  const KDTree kdtree(dim, codeVectors);
 
-  for (size_t i = 0; i < trainingSet.size(); i++) {
-    size_t found = kdtree.nearestNeighbour(trainingSet[i]);
-    assignedCodeVector[i] = found;
+  auto performOnRange = [&](size_t l, size_t r)
+  {
+    for (size_t i = l; i < std::min(r, trainingSet.size()); i++) {
+      size_t found = kdtree.nearestNeighbour(trainingSet[i]);
+      assignedCodeVector[i] = found;
+    }
+  };
+
+  if(ncpu == 0)
+  {
+    performOnRange(0, trainingSet.size());
   }
+  else
+  {
+    size_t span = (trainingSet.size()+ncpu-1)/ncpu;
+    std::vector<std::thread> threads(ncpu);
+    for(size_t i = 0; i < ncpu; i++)
+      threads[i] = std::thread(performOnRange, i*span, (i+1)*span);
+
+    for(auto &t : threads)
+      t.join();
+  }
+
 }
 
 class MedianCut : public AbstractQuantizer {
