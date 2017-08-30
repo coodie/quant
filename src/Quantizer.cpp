@@ -10,6 +10,7 @@ VectorType getDistortion(const std::vector<Vector> &trainingSet,
   size_t M = trainingSet.size();
 
   VectorType res = 0;
+  #pragma omp parallel for reduction(+:res)
   for (size_t i = 0; i < trainingSet.size(); i++) {
     const auto &x = trainingSet[i];
     const auto &c = codeVectors[assignedCodeVector[i]];
@@ -28,29 +29,11 @@ void assignCodeVectors(const std::vector<Vector> &trainingSet,
   size_t dim = trainingSet.front().size();
   const KDTree kdtree(dim, codeVectors);
 
-  auto performOnRange = [&](size_t l, size_t r)
-  {
-    for (size_t i = l; i < std::min(r, trainingSet.size()); i++) {
-      size_t found = kdtree.nearestNeighbour(trainingSet[i]);
-      assignedCodeVector[i] = found;
-    }
-  };
-
-  if(ncpu == 0)
-  {
-    performOnRange(0, trainingSet.size());
+  #pragma omp parallel for
+  for (size_t i = 0; i < trainingSet.size(); i++) {
+    size_t found = kdtree.nearestNeighbour(trainingSet[i]);
+    assignedCodeVector[i] = found;
   }
-  else
-  {
-    size_t span = (trainingSet.size()+ncpu-1)/ncpu;
-    std::vector<std::thread> threads(ncpu);
-    for(size_t i = 0; i < ncpu; i++)
-      threads[i] = std::thread(performOnRange, i*span, (i+1)*span);
-
-    for(auto &t : threads)
-      t.join();
-  }
-
 }
 
 class MedianCut : public AbstractQuantizer {
@@ -124,6 +107,8 @@ VectorType getDistortionInArea(const std::vector<Vector> &trainingSet,
   size_t M = trainingSet.size();
 
   VectorType res = 0;
+
+  #pragma omp parallel for reduction(+:res)
   for (size_t i = 0; i < area.size(); i++) {
     const auto &x = trainingSet[area[i]];
     auto tmp = norm(x - codeVector);
@@ -188,6 +173,7 @@ void fixCodeVectors(const std::vector<Vector> &trainingSet,
       mx = i;
   }
 
+  #pragma omp parallel for
   for (size_t i = 0; i < codeVectors.size(); i++) {
     codeVectors[i] = kahanSum(trainingSet, codeVectorArea[i]);
 
@@ -245,6 +231,7 @@ public:
     while (codeVectors.size() < maxCodeVectors) {
       // splitting phase
       concat(codeVectors, codeVectors);
+      #pragma omp parallel for
       for (size_t i = 0; i < codeVectors.size() / 2; i++) {
         codeVectors[i] *= (VectorType)(1 + 0.2);
         codeVectors[i + codeVectors.size() / 2] *= (VectorType)(1 - 0.2);

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2.2)
 project (quant)
 
 ####### Compiler options
-add_compile_options(--std=c++14 -Wall -Wno-missing-braces)
+add_compile_options(--std=c++14 -Wall -Wno-missing-braces -fopenmp)
 
 # CMake automatically adds -g to Debug build
 # CMake automatically adds -O3 and -NDEBUG to Release build
@@ -46,7 +46,7 @@ if(Boost_FOUND)
 
     include_directories(${Boost_INCLUDE_DIRS})
     add_executable(quant src/main.cpp)
-    target_link_libraries(quant quantsrc pthread)
+    target_link_libraries(quant quantsrc gomp)
 endif()
 
 ####### Add GTest
@@ -55,5 +55,5 @@ enable_testing()
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCEDIR})
 
 add_executable(runtest src/test.cpp)
-target_link_libraries(runtest gtest gtest_main quantsrc pthread)
+target_link_libraries(runtest gtest gtest_main quantsrc gomp)
 add_test(runtest runtest)
