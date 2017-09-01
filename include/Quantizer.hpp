@@ -5,7 +5,7 @@
 #include <tuple>
 #include <thread>
 
-enum class Quantizers { LBG, MEDIAN_CUT, LBG_MEDIAN_CUT };
+enum class Quantizers { LBG, MEDIAN_CUT, LBG_MEDIAN_CUT, ABC };
 
 class AbstractQuantizer {
  public:

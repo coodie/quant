@@ -20,7 +20,6 @@ VectorType getDistortion(const std::vector<Vector> &trainingSet,
   return res;
 }
 
-
 size_t ncpu = std::thread::hardware_concurrency();
 
 void assignCodeVectors(const std::vector<Vector> &trainingSet,
@@ -191,8 +190,7 @@ void fixCodeVectors(const std::vector<Vector> &trainingSet,
 void LBGIterate(const std::vector<Vector> &trainingSet,
                 std::vector<size_t> &assignedCodeVector,
                 std::vector<Vector> &codeVectors, VectorType distortion,
-                VectorType eps) {
-  const size_t MAX_IT = 100;
+                VectorType eps, const size_t MAX_IT = 100) {
   // iteration phase
   for (size_t it = 0; it < MAX_IT; it++) {
     assignCodeVectors(trainingSet, codeVectors, assignedCodeVector);
@@ -267,6 +265,195 @@ public:
   }
 };
 
+VectorType genRandom()
+{
+  thread_local std::random_device rd;
+  thread_local std::mt19937 gen(rd());
+  thread_local std::uniform_real_distribution<> dis(0, std::nextafter(1.0, std::numeric_limits<VectorType>::max()));
+  return dis(gen);
+}
+
+size_t genRandomInt(size_t range)
+{
+  thread_local std::random_device rd;
+  thread_local std::mt19937 gen(rd());
+  thread_local std::uniform_int_distribution<size_t> dis(0, 1'000'000'000);
+  return dis(gen)%range;
+}
+
+std::vector<size_t> randomVector(size_t n, size_t range)
+{
+  std::vector<size_t> res;
+  for(size_t i = 0; i < n; i++)
+    res.push_back(genRandomInt(range));
+  std::sort(std::begin(res), std::end(res));
+  res.erase(std::unique(std::begin(res), std::end(res)), std::end(res));
+
+  return res;
+}
+
+class ABCQuantizer : public AbstractQuantizer 
+{
+  /* Set of codevectors, assigned codevector, fitness value, number of times this solutions was better */
+  struct Solution
+  {
+    std::vector<Vector> codeVectors;
+    std::vector<size_t> assignedCodeVector;
+    size_t attempts;
+    VectorType fitness;
+  };
+
+public:
+  virtual std::tuple<std::vector<Vector>, std::vector<size_t>, VectorType>
+  quantize(const std::vector<Vector> &trainingSet, size_t n, VectorType eps) {
+
+    solutionSize = 1 << n;
+    dim = trainingSet.front().size();
+
+    lowerBound.resize(dim);
+    upperBound.resize(dim);
+
+    for(size_t i = 0; i < dim; i++)
+    {
+      auto cmp = [i](const Vector &a, const Vector &b)
+      {
+        return a[i] < b[i];
+      };
+      lowerBound[i] = std::min_element(begin(trainingSet), end(trainingSet), cmp)->at(i);
+      upperBound[i] = std::max_element(begin(trainingSet), end(trainingSet), cmp)->at(i);
+    }
+
+    size_t noRandomDims = std::max(1.0f, randomDimsRatio * solutionSize);
+
+    std::vector<Solution> solutions(employedBee);
+
+    for(size_t i = 0; i < employedBee; i++) 
+      solutions[i] = randomizeSolution(trainingSet);
+
+    for(size_t cycle = 0; cycle < MCN; cycle++)
+    {
+      std::cout << cycle << std::endl;
+      auto singleExploit = [&](size_t i)
+      {
+        size_t rs = genRandomInt(solutions.size());
+        while(rs != i)
+          rs = genRandomInt(solutions.size());
+        exploit(solutions[i], solutions[rs], 
+            randomVector(noRandomDims, solutions.size()), eps, trainingSet);
+      };
+
+      for(size_t i = 0; i < solutions.size(); i++)
+        singleExploit(i);
+
+      VectorType fitnessSum = 0.0;
+      for(auto &a : solutions)
+        fitnessSum += a.fitness;
+
+      for(size_t i = 0; i < solutions.size(); i++)
+      {
+        VectorType r = genRandom();
+        if(r < solutions[i].fitness/fitnessSum)
+          singleExploit(i);
+      }
+
+      for(auto &s : solutions)
+        if(s.attempts >= limit)
+          s = randomizeSolution(trainingSet);
+    }
+    auto it = std::max_element(std::begin(solutions), std::end(solutions), 
+        [](const auto &a, const auto &b)
+        {
+          return a.fitness < b.fitness;
+        });
+
+    return std::make_tuple(it->codeVectors, it->assignedCodeVector, it->fitness);
+  }
+
+private:
+
+  void exploit(Solution &solution,
+               const Solution &randomSolution,
+               std::vector<size_t> randomDims,
+               VectorType eps,
+      const std::vector<Vector> &trainingSet)
+  {
+    VectorType distortion = getDistortion(trainingSet, solution.assignedCodeVector, solution.codeVectors); 
+    LBGIterate(trainingSet, solution.assignedCodeVector, solution.codeVectors, distortion, eps, LGBIterations);
+    assignCodeVectors(trainingSet, solution.codeVectors, solution.assignedCodeVector);
+    distortion = getDistortion(trainingSet, solution.assignedCodeVector, solution.codeVectors);
+
+    solution.fitness = fitness(distortion);
+    Solution oldSolution = solution;
+
+    for(auto &curDim : randomDims)
+    {
+      auto& x = solution.codeVectors[curDim];
+      auto& y = randomSolution.codeVectors[curDim];
+      auto r = genRandom()*2-1;
+      x += (x-y)*r;
+    }
+
+    assignCodeVectors(trainingSet, solution.codeVectors, solution.assignedCodeVector);
+    VectorType newDistortion = getDistortion(trainingSet, solution.assignedCodeVector, solution.codeVectors); 
+
+    if(newDistortion < distortion)
+    {
+      solution.attempts = 0;
+      solution.fitness = fitness(newDistortion);
+    }
+    else
+    {
+      solution = std::move(oldSolution);
+      solution.attempts++;
+    }
+  }
+
+  VectorType fitness(VectorType x)
+  {
+    return 1/(1+x);
+  }
+
+  Solution randomizeSolution(const std::vector<Vector> &trainingSet)
+  {
+    Solution res;
+    initializeSolution(res, trainingSet.size());
+
+    for(size_t i = 0; i < solutionSize; i++)
+    {
+      for(size_t j = 0; j < dim; j++)
+      {
+        VectorType r = genRandom();
+        res.codeVectors[i][j] = lowerBound[j]+(upperBound[j]-lowerBound[j])*r;
+      }
+    }
+    assignCodeVectors(trainingSet, res.codeVectors, res.assignedCodeVector);
+    VectorType distortion = getDistortion(trainingSet, res.assignedCodeVector, res.codeVectors);
+    res.fitness = fitness(distortion);
+    return res;
+  }
+
+  void initializeSolution(Solution& s, size_t trainingSetSize)
+  {
+    s.codeVectors.resize(solutionSize);
+    s.assignedCodeVector.resize(trainingSetSize);
+
+    for(auto &x : s.codeVectors) x.resize(dim);
+  }
+  
+  size_t solutionSize;
+  size_t dim;
+
+  std::vector<VectorType> lowerBound;
+  std::vector<VectorType> upperBound;
+
+  const size_t employedBee = 20;
+  const size_t onlookerBee = employedBee;
+  const size_t limit = 5;
+  const size_t MCN = 50;
+  const size_t LGBIterations = 10;
+  const float randomDimsRatio = 0.1;
+};
+
 QuantizerPtr getQuantizer(Quantizers q) {
   switch (q) {
   case Quantizers::LBG:
@@ -277,6 +464,9 @@ QuantizerPtr getQuantizer(Quantizers q) {
     break;
   case Quantizers::LBG_MEDIAN_CUT:
     return QuantizerPtr(new LBGMedianCutQuantizer());
+    break;
+  case Quantizers::ABC:
+    return QuantizerPtr(new ABCQuantizer());
     break;
   }
   return nullptr;
